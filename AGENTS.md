@@ -54,11 +54,23 @@ tokens + RN `StyleSheet`** (PRD 6.4):
 
 Switching styling libraries requires a `docs/DECISIONS.md` entry first.
 
-## Money & dates
+## Shared code — use `@app/shared`, don't duplicate
 
-Money is always **integer paise** — no floats (PRD 10.1). Use `@app/shared` helpers
-(`formatINR`, date helpers). Never `parseFloat`/`toFixed` on money; never `new Date()` for IST
-logic outside `shared/dates.ts`.
+Domain logic lives **once** in `@app/shared` and is consumed by both the mobile app and the
+API. Before writing a helper for money, dates, or the repayment schedule, check `shared/src`
+and reuse it. Do **not** re-implement or copy this logic into `apps/mobile` or `apps/api`.
+
+- **Money:** always **integer paise**, no floats (PRD 10.1). Use `formatINR`, `rupeesToPaise`,
+  `assertPaise` from `@app/shared`. Never `parseFloat`/`toFixed` on money.
+- **Dates:** IST calendar dates via `@app/shared` (`addDays`, `addMonths`, `compareIsoDate`,
+  `todayIST`, `formatDate`, …). Never `new Date()` for IST "today" logic outside `shared/dates.ts`.
+- **Schedule:** installment schedule, status, overdue counts, and next-due come from
+  `computeSchedule` in `@app/shared`. The API's `ScheduleProvider` and every mobile screen
+  derive from it — do not hand-roll schedule math anywhere else.
+- **Types:** shared domain types live in `shared/src/types`. Import them; don't redeclare.
+
+If something is needed in more than one app, it belongs in `@app/shared`. Add it there (with a
+test), then import it. New shared behaviour must ship with a Vitest test (`npm test` in `shared`).
 
 ## Phases
 

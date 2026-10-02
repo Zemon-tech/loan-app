@@ -12,12 +12,19 @@ installed. Follow these steps in order to generate the real projects.
 
 ---
 
-## 1. Shared package (`shared/`)
+## 1. Shared package (`shared/`) — DONE
+`@app/shared` is implemented: `money.ts`, `dates.ts`, `schedule.ts`, `types/schedule.ts`.
+Uses Vitest. The golden test (PRD 12.4) plus money/date/schedule tests all pass.
+
 ```bash
-# From repo root
-npm init -w shared -y          # or hand-write shared/package.json as "@app/shared"
+# From repo root (installs vitest/typescript for the workspace)
+npm install
+
+# Run the shared tests and typecheck
+npm run test --workspace @app/shared
+npm run typecheck --workspace @app/shared
+# or from the root: npm test   /   npm run typecheck
 ```
-Then implement `money.ts`, `dates.ts`, `schedule.ts` and the golden test (PRD 12.4).
 
 ## 2. Mobile app (`apps/mobile/`) — Expo SDK 57
 
