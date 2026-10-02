@@ -14,8 +14,56 @@ item or an ambiguity must be recorded here (PRD Section 0, rule 10).
 | 2026-10-02 | Mobile screen map & UX | Agreed screen inventory, navigation, and simplicity rules. See **"Mobile screen map & UX decisions"** section below. | Simplicity is the top product priority (audience: mid-range phones, possibly Hindi-first, less tech-comfortable). Refines PRD Section 8 for ease of use. |
 | 2026-10-02 | Shared test runner | `@app/shared` uses **Vitest** (`npm test` → `vitest run`). | Fast, zero-config TS/ESM; PRD 6.2 lists Vitest as an option. Root `test`/`typecheck` delegate to the shared workspace for now. |
 | 2026-10-02 | Shared module layout | `shared/src`: `money.ts`, `dates.ts`, `schedule.ts`, `types/schedule.ts`, `index.ts` barrel. ESM (`"type":"module"`), relative imports use `.js` extensions. `formatINR` shows **whole rupees** (paise dropped) with Indian grouping; dates are IST calendar dates (UTC-anchored, no off-by-one). | Implements PRD §10.1, §12. Golden test (§12.4) + 40 more tests pass; strict typecheck clean. |
+| 2026-10-02 | Screen prototype | Barebone navigable prototype of all screens built (see **"Mobile prototype"** section below). Placeholders + `TODO` markers; a throwaway in-memory session gates the tabs. | Gives other devs a navigable foundation to build real screens/data on. Not production code. |
 
 <!-- Add new rows above. Keep newest at the bottom of each topic. -->
+
+---
+
+## Mobile prototype (2026-10-02)
+
+A **barebone, navigable prototype** of every screen in the map below. It is a foundation for
+other devs — **not production code**. Conventions:
+
+- **Structured skeletons:** each screen blocks out the real layout regions with static
+  placeholder values. Every screen has a header comment with a `TODO (task-id)` listing what
+  real work remains (API calls, states, i18n, etc.).
+- **Throwaway session:** `src/features/auth/session.tsx` is an in-memory `SessionProvider`
+  (`isLoggedIn` flag). Login → OTP → "Verify" flips the flag and enters the tabs. Replace with
+  real auth in M-03. **No real OTP/JWT logic yet.**
+- **Placeholder data:** `src/features/loans/placeholderData.ts` holds 2 fake loans. Replace
+  with the mock/live API adapter (F-05/F-06); derive schedule via `@app/shared`.
+- **UI primitives:** `src/components/ui/` — `Button`, `Card`, `ListRow`, `StatusBadge`,
+  `ScreenContainer`. All token-based via `useAppTheme()`. Compose screens from these.
+- **Plain strings for now:** text is inline with `TODO: i18n` (i18next setup is a later task).
+- **Icons:** text glyphs stand in for real icons (tab bar + status badges) — `TODO: real icons`.
+- **Routing:** Expo Router with `typedRoutes`; dynamic nav uses the href-object form
+  (`router.push({ pathname: '/loan/[loanId]', params: { loanId } })`). Route types regenerate
+  when `npx expo start` runs.
+- **Single-loan shortcut (decision b):** the prototype's My Loans tab always shows the list
+  (2 placeholders) so the screen is visible; the real "1 loan → open detail directly" rule is
+  a documented `TODO` in `loans.tsx`.
+
+Verified: `npx tsc --noEmit` clean. Not yet run visually in a simulator.
+
+### Route files
+```
+src/app/_layout.tsx                         SessionProvider + root stack
+src/app/index.tsx                           redirect → /loans or /login
+src/app/(auth)/_layout.tsx                  auth stack
+src/app/(auth)/login.tsx                    S2 Login
+src/app/(auth)/otp.tsx                      S3 OTP
+src/app/(app)/_layout.tsx                   tabs + auth gate (My Loans, My Account)
+src/app/(app)/loans.tsx                     S5 loan list
+src/app/(app)/loan/[loanId]/index.tsx       S6 loan overview
+src/app/(app)/loan/[loanId]/schedule.tsx    S7 schedule
+src/app/(app)/loan/[loanId]/history.tsx     S8 history
+src/app/(app)/account.tsx                   S9 account
+src/app/(app)/account/settings.tsx          S10 settings (+ logout)
+src/app/(app)/account/help.tsx              S11 help
+src/app/(app)/account/legal.tsx             S12 legal
+src/app/(app)/account/delete.tsx            S10 delete account
+```
 
 ---
 

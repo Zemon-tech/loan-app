@@ -1,17 +1,14 @@
-import { StyleSheet, View } from 'react-native';
+import { Redirect } from 'expo-router';
 
-import { useAppTheme } from '@/hooks/use-theme';
+import { useSession } from '@/features/auth/session';
 
+/**
+ * Entry route. Sends the user into the app if logged in, otherwise to login.
+ *
+ * TODO (S1 boot flow): before this, call GET /v1/config and route to Update Required /
+ * Maintenance when needed, and attempt refresh-token rehydration (then app-lock unlock).
+ */
 export default function Index() {
-  const theme = useAppTheme();
-
-  return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]} />
-  );
+  const { isLoggedIn } = useSession();
+  return <Redirect href={isLoggedIn ? '/loans' : '/login'} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
