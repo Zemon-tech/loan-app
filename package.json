@@ -1,0 +1,19 @@
+{
+  "name": "loan-app",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Customer-facing read-only loan tracker for an NBFC (Expo + Fastify monorepo).",
+  "workspaces": [
+    "shared",
+    "apps/mobile",
+    "apps/api"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "lint": "echo \"TODO: run eslint across workspaces\" && exit 0",
+    "typecheck": "echo \"TODO: run tsc --noEmit across workspaces\" && exit 0",
+    "test": "echo \"TODO: run tests across workspaces\" && exit 0"
+  }
+}

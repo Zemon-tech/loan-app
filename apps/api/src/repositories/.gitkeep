@@ -1,0 +1,2 @@
+# LoanRepository: MysqlLoanRepository + MockLoanRepository (A-05).
+# No SQL outside repositories/. Every query scoped by customerId (PRD A2, A3).

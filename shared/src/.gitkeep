@@ -1,0 +1,5 @@
+# @app/shared source. Planned files (F-04):
+#   money.ts     - paise helpers, formatINR
+#   dates.ts     - IST helpers, date math
+#   schedule.ts  - pure schedule calculator (PRD Section 12)
+#   schedule.test.ts - golden tests (PRD 12.4)

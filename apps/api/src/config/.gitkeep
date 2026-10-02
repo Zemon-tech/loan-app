@@ -1,0 +1,1 @@
+# env.ts — zod-validated environment (PRD 19.3). Fail fast on missing/short secrets.

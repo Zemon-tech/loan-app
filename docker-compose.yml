@@ -1,0 +1,17 @@
+# Local dev stack: a client-like MySQL (loans/txns) + the app-owned schema live
+# on the same server. Seed data is FAKE only (never real customer data).
+# Placeholder — flesh out in task A-10.
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: loanapp-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: devroot
+      MYSQL_DATABASE: client_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker-data/mysql:/var/lib/mysql
+      # - ./apps/api/src/db/seed:/docker-entrypoint-initdb.d  # TODO: fake seed (A-10)
+    # NOTE: port 3306 is exposed to the host for LOCAL DEV ONLY.
+    # In staging/production MySQL is never reachable from the public internet (PRD 6.3).

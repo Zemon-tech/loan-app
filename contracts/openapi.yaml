@@ -1,0 +1,23 @@
+# OpenAPI contract — SINGLE SOURCE OF TRUTH for the API (PRD Section 10, task F-03).
+# Contract-first: change this file BEFORE changing endpoints or client code, then
+# regenerate TS types into shared/src/types. This is a skeleton to be completed in F-03.
+openapi: 3.1.0
+info:
+  title: Loan App API
+  version: 0.0.0
+  description: >
+    Read-only customer loan tracker. No payment, loan-application, or marketing
+    endpoints exist in any phase (PRD scope guard, Section 0 rule 11).
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /health:
+    get:
+      summary: Liveness check (public)
+      responses:
+        '200':
+          description: OK
+# TODO (F-03): add /config, /auth/*, /me, /loans, /loans/{loanId},
+# /loans/{loanId}/schedule, /loans/{loanId}/transactions, /devices.
+components:
+  schemas: {}
