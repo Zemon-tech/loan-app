@@ -37,7 +37,7 @@ export const Fonts = Platform.select({
 // Never hardcode a colour or size in a component; always reference a token.
 // ============================================================================
 
-/** Semantic colour roles (11), light + dark. Follows the system setting. */
+/** Semantic colour roles (11 core + 6 surface tints), light + dark. Follows the system setting. */
 export const AppColors = {
   light: {
     primary: '#1E63E9',
@@ -51,6 +51,13 @@ export const AppColors = {
     warning: '#D97706',
     danger: '#DC2626',
     info: '#2563EB',
+    // Auth / entry surfaces (mockups): lavender page tint, white card, soft tints.
+    canvas: '#F9F9FF',
+    card: '#FFFFFF',
+    primarySoft: '#E8EEFF',
+    successSoft: '#DCFCE7',
+    dangerSoft: '#FDECEC',
+    warningSoft: '#FEF3C7',
   },
   dark: {
     primary: '#4F8CFF',
@@ -64,6 +71,12 @@ export const AppColors = {
     warning: '#F59E0B',
     danger: '#EF4444',
     info: '#60A5FA',
+    canvas: '#000000',
+    card: '#16181B',
+    primarySoft: '#16233F',
+    successSoft: '#0F2A1A',
+    dangerSoft: '#2A1416',
+    warningSoft: '#2B2110',
   },
 } as const;
 
@@ -81,6 +94,7 @@ export const AppRadius = {
   sm: 6,
   md: 8,
   lg: 12,
+  xl: 20,
   pill: 999,
 } as const;
 

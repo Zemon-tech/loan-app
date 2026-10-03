@@ -1,11 +1,11 @@
 /**
- * StatusBadge — colour + text + icon for an installment/loan status (PRD 6.4, F-07).
- * ALWAYS pairs colour with a text label (never colour alone) for accessibility.
+ * StatusBadge — colour + icon + TEXT for an installment/loan status (PRD 6.4, F-07).
+ * ALWAYS pairs colour with a text label and an icon (never colour alone).
  */
-import { Text, View } from 'react-native';
+import { StatusColorRole, type AppColorRole, type StatusColorRoleKey } from '@/constants/theme';
 
-import { StatusColorRole, type StatusColorRoleKey } from '@/constants/theme';
-import { useAppTheme } from '@/hooks/use-theme';
+import type { IconName } from './Icon';
+import { Pill } from './Pill';
 
 /** Loan-level status also supported for the loan cards. */
 export type BadgeStatus = StatusColorRoleKey | 'ACTIVE' | 'CLOSED';
@@ -20,52 +20,40 @@ const LABEL: Record<BadgeStatus, string> = {
   CLOSED: 'Closed',
 };
 
-// Simple text glyphs stand in for icons in the prototype (TODO: real icons).
-const ICON: Record<BadgeStatus, string> = {
-  PAID: '\u2713', // check
-  PARTIAL: '\u25D1', // half circle
-  OVERDUE: '\u26A0', // warning
-  DUE_TODAY: '\u25CF', // dot
-  UPCOMING: '\u25CB', // open circle
-  ACTIVE: '\u25CF',
-  CLOSED: '\u2713',
+const ICON: Record<BadgeStatus, IconName> = {
+  PAID: 'checkmark-circle',
+  PARTIAL: 'contrast-outline',
+  OVERDUE: 'warning',
+  DUE_TODAY: 'time-outline',
+  UPCOMING: 'ellipse-outline',
+  ACTIVE: 'ellipse',
+  CLOSED: 'checkmark-circle-outline',
 };
 
-function roleFor(status: BadgeStatus) {
-  if (status === 'ACTIVE') return 'info' as const;
-  if (status === 'CLOSED') return 'success' as const;
+const SOFT: Record<BadgeStatus, AppColorRole> = {
+  PAID: 'successSoft',
+  PARTIAL: 'warningSoft',
+  OVERDUE: 'dangerSoft',
+  DUE_TODAY: 'primarySoft',
+  UPCOMING: 'surface',
+  ACTIVE: 'primarySoft',
+  CLOSED: 'successSoft',
+};
+
+function roleFor(status: BadgeStatus): AppColorRole {
+  if (status === 'ACTIVE') return 'info';
+  if (status === 'CLOSED') return 'success';
   return StatusColorRole[status];
 }
 
 export function StatusBadge({ status }: { status: BadgeStatus }) {
-  const theme = useAppTheme();
-  const color = theme.colors[roleFor(status)];
-
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing.xs,
-        alignSelf: 'flex-start',
-        paddingVertical: theme.spacing.xs,
-        paddingHorizontal: theme.spacing.sm,
-        borderRadius: theme.radius.pill,
-        backgroundColor: theme.colors.surface,
-        borderWidth: 1,
-        borderColor: color,
-      }}
-    >
-      <Text style={{ color, fontSize: theme.typography.size.caption }}>{ICON[status]}</Text>
-      <Text
-        style={{
-          color,
-          fontSize: theme.typography.size.caption,
-          fontWeight: theme.typography.weight.semibold as '600',
-        }}
-      >
-        {LABEL[status]}
-      </Text>
-    </View>
+    <Pill
+      icon={ICON[status]}
+      label={LABEL[status]}
+      color={roleFor(status)}
+      background={SOFT[status]}
+      uppercase
+    />
   );
 }

@@ -1,19 +1,24 @@
 /**
  * Button — token-based pressable (PRD F-07).
- * Barebone prototype primitive. Extend with loading state, sizes, icons as needed.
+ * Variants: primary, secondary (outlined), danger, ghost (text only).
+ * Optional leading / trailing icons.
  */
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
+  View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 
+import type { AppColorRole } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-theme';
 
-type Variant = 'primary' | 'secondary' | 'danger';
+import { Icon, type IconName } from './Icon';
+
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 export interface ButtonProps {
   label: string;
@@ -21,6 +26,8 @@ export interface ButtonProps {
   variant?: Variant;
   disabled?: boolean;
   loading?: boolean;
+  leftIcon?: IconName;
+  rightIcon?: IconName;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }
@@ -31,6 +38,8 @@ export function Button({
   variant = 'primary',
   disabled = false,
   loading = false,
+  leftIcon,
+  rightIcon,
   style,
   accessibilityLabel,
 }: ButtonProps) {
@@ -41,26 +50,33 @@ export function Button({
       ? theme.colors.primary
       : variant === 'danger'
         ? theme.colors.danger
-        : theme.colors.surface;
-  const fg =
-    variant === 'secondary' ? theme.colors.textPrimary : theme.colors.onPrimary;
-  const borderColor = variant === 'secondary' ? theme.colors.border : 'transparent';
+        : variant === 'ghost'
+          ? 'transparent'
+          : theme.colors.card;
+  const fgRole: AppColorRole =
+    variant === 'secondary'
+      ? 'textPrimary'
+      : variant === 'ghost'
+        ? 'textSecondary'
+        : 'onPrimary';
+  const fg = theme.colors[fgRole];
+  const outlined = variant === 'secondary';
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled: disabled || loading }}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       disabled={disabled || loading}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
         {
           backgroundColor: bg,
-          borderColor,
-          borderWidth: variant === 'secondary' ? StyleSheet.hairlineWidth : 0,
-          minHeight: theme.touchTarget.min,
-          borderRadius: theme.radius.md,
+          borderColor: outlined ? theme.colors.border : 'transparent',
+          borderWidth: outlined ? StyleSheet.hairlineWidth : 0,
+          minHeight: variant === 'ghost' ? theme.touchTarget.min : 52,
+          borderRadius: theme.radius.lg,
           paddingHorizontal: theme.spacing.lg,
           opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
         },
@@ -70,15 +86,19 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
-        <Text
-          style={{
-            color: fg,
-            fontSize: theme.typography.size.body,
-            fontWeight: theme.typography.weight.semibold as '600',
-          }}
-        >
-          {label}
-        </Text>
+        <View style={styles.content}>
+          {leftIcon ? <Icon name={leftIcon} size={20} color={fgRole} /> : null}
+          <Text
+            style={{
+              color: fg,
+              fontSize: theme.typography.size.body,
+              fontWeight: theme.typography.weight.semibold,
+            }}
+          >
+            {label}
+          </Text>
+          {rightIcon ? <Icon name={rightIcon} size={20} color={fgRole} /> : null}
+        </View>
       )}
     </Pressable>
   );
@@ -88,5 +108,10 @@ const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });

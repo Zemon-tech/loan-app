@@ -35,6 +35,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Loan Tracker to use Face ID to unlock the app."
+        }
       ]
     ],
     "experiments": {

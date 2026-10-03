@@ -7,16 +7,18 @@ import { useAppTheme } from '@/hooks/use-theme';
 
 export interface CardProps extends ViewProps {
   style?: StyleProp<ViewStyle>;
+  /** 'surface' (default, grey) or 'card' (white / elevated-dark, for use on the canvas tint). */
+  tone?: 'surface' | 'card';
 }
 
-export function Card({ style, children, ...rest }: CardProps) {
+export function Card({ style, tone = 'surface', children, ...rest }: CardProps) {
   const theme = useAppTheme();
   return (
     <View
       {...rest}
       style={[
         {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: tone === 'card' ? theme.colors.card : theme.colors.surface,
           borderRadius: theme.radius.lg,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: theme.colors.border,
