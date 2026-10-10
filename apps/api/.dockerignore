@@ -1,0 +1,8 @@
+node_modules
+dist
+test
+*.test.ts
+.env
+.env.*
+!.env.example
+docker-data

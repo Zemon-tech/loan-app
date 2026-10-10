@@ -1,1 +1,0 @@
-# clientDb.ts (read-only mysql2 pool) + appDb.ts (read/write mobile_app schema).

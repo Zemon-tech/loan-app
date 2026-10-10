@@ -1,2 +1,0 @@
-# ScheduleProvider: ComputedScheduleProvider + DbScheduleProvider (PRD 12.1).
-# Both delegate pure math to @app/shared/schedule.

@@ -84,22 +84,73 @@ npx expo start              # (targets the dev build automatically once expo-dev
 Rebuild the native app only after adding a native library, changing `app.config.ts`,
 or upgrading the SDK: `npx expo prebuild --clean` then rebuild.
 
-## 3. API (`apps/api/`) — Fastify
+## 3. API (`apps/api/`) — Express 5 + TypeScript — SCAFFOLDED
+
+The API skeleton is in place (task A-01). Stack: **Express 5**, `zod` (env + request
+validation), `mysql2` (read-only client-DB pool), `knex` (app-owned schema migrations),
+`pino`/`pino-http` (structured logs, PII-redacted), `helmet` + `express-rate-limit` (security),
+`jsonwebtoken` (auth, A-04). Runs on **Node.js 22 LTS** via `tsx` (no separate build step; the
+`@app/shared` workspace ships raw TS). See `docs/DECISIONS.md` for the Express-vs-Fastify note.
+
 ```bash
-npm init -w apps/api -y
-cd apps/api
-# add: fastify, zod, mssql, knex, pino, @fastify/rate-limit, @fastify/helmet, jsonwebtoken
+# From repo root — installs all workspace deps (shared + mobile + api)
+npm install
+
+# API dev loop (watches + restarts). Needs a MySQL to be reachable (see step 4) OR it will
+# log a fatal read-only-guard error and exit — expected without a DB.
+npm run dev --workspace @app/api
+
+# Typecheck + tests (skeleton smoke tests need no DB)
+npm run typecheck --workspace @app/api
+npm run test --workspace @app/api
+
+# App-owned schema migrations (once MySQL is up)
+npm run migrate:latest --workspace @app/api
+
+# Copy env and fill in secrets (JWT/OTP secrets must be >= 32 chars)
+# apps/api/.env.example -> apps/api/.env
 ```
 
-> **Database = Microsoft SQL Server (not MySQL).** The client runs SQL Server, so the
-> client-DB driver is `mssql` (Tedious), not `mysql2`. Do **not** develop/test against
-> PostgreSQL or MySQL — the SQL dialect, driver, and paging differ and queries written
-> here would not run against the client's real DB. Test against SQL Server itself.
-> See `docs/DECISIONS.md` for the app-owned-schema engine decision (SQL Server vs Postgres).
+Running skeleton today: `GET /v1/health`, `GET /v1/health/ready` (DB connectivity),
+`GET /v1/config`. Auth, `/me`, and loan endpoints are the next tasks (A-04, A-08, A-09).
 
-## 4. Local DB stack
+> **Database = MySQL.** Confirmed with the client (2026-10-07): the client runs **MySQL**,
+> so the client-DB driver is `mysql2` with a pooled, read-only connection and parameterised
+> queries only (PRD §6.2, §14.1). The app-owned `mobile_app` schema lives on the same MySQL
+> server with its own read/write user. Run `docker compose up` for a local MySQL 8.4 stack
+> with fake seed data. See `docs/DECISIONS.md` for the engine decision record.
+
+## 4. Local DB stack (MySQL 8.4 via Docker in WSL)
+
+Docker runs **inside WSL 2** here (not Docker Desktop), so run compose from a WSL shell. On
+first start the container runs `apps/api/src/db/seed/*.sql`, creating both schemas and both
+least-privilege users (`client_db`+`app_ro` SELECT-only, `mobile_app`+`app_rw` full DML).
+
 ```bash
-docker compose up        # starts SQL Server (fake seed only) — see docker-compose.yml
+# In a WSL terminal (Ubuntu). cd to the repo via the Windows mount:
+cd /mnt/s/1-Project/zemon/laxmi-finanace
+
+docker compose up -d                 # start MySQL in the background
+docker compose ps                    # STATUS should become "healthy"
+docker compose logs -f mysql         # watch init (Ctrl-C to stop watching)
+
+docker compose down                  # stop (data persists in ./docker-data)
+docker compose down -v; rm -rf docker-data   # FULL reset (re-runs the seed)
+```
+
+**Networking:** on WSL 2, Windows reaches the container at `localhost:3306`, so the API
+(running on Windows via `npm run dev`) connects with `CLIENT_DB_HOST=127.0.0.1` out of the box
+(`apps/api/.env`). If `localhost` ever fails, get the distro IP with `wsl hostname -I` and use
+that instead.
+
+**Local-dev credentials** (fake data only — never production): root `devroot`;
+`app_ro`/`ro_pass` (read-only `client_db`); `app_rw`/`rw_pass` (read/write `mobile_app`).
+These are already set in `apps/api/.env`.
+
+Once MySQL is `healthy`, from Windows:
+```powershell
+npm run migrate:latest --workspace @app/api   # create app-owned tables (after A-02 adds them)
+npm run dev --workspace @app/api              # boots; /v1/health/ready should return "ready"
 ```
 
 ## 5. Root tooling

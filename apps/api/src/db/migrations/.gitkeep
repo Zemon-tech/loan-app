@@ -1,2 +1,0 @@
-# Knex migrations for the app-owned mobile_app schema (PRD 14.4):
-#   otp_requests, sessions, devices, deletion_requests, audit_log.

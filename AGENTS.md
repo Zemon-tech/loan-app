@@ -91,16 +91,14 @@ never in scope.
 5. **Verify before done:** lint + `npx tsc --noEmit` + tests where they exist. Exit 0 ≠ done —
    check against PRD Section 20 acceptance criteria.
 
-## ⚠️ Pending conflict — DB engine (API work ONLY)
+## ✅ Resolved — DB engine is MySQL
 
-> Applies when touching `apps/api/`, `docker-compose.yml`, `apps/api/.env.example`,
-> `docs/DB_ACCESS.md`, `docs/DB_MAPPING.md`, or DB/repository code. **Ignore for
-> mobile/`shared`/docs-only work** — unaffected by the DB engine.
+> Confirmed with the client (2026-10-07): the database is **MySQL**. The earlier SQL Server
+> conflict is closed. Logged in `docs/DECISIONS.md`.
 
-PRD assumes **MySQL**; client's real DB is **Microsoft SQL Server**. Not yet reconciled.
-Before reading the client DB: use the **`mssql`** driver (not `mysql2`) and **SQL Server in
-Docker** for local tests (never Postgres/MySQL — dialect/driver/paging differ).
-Undecided (confirm, then log in `DECISIONS.md`): (1) on-prem SQL Server vs Azure SQL;
-(2) app-owned schema on SQL Server (same server) vs a separate hosted PostgreSQL.
-Still-MySQL files to fix once confirmed: `docker-compose.yml`, `apps/api/.env.example`,
-`docs/DB_ACCESS.md`, PRD §6.2/14/19. Flag this in any API change until resolved.
+Use the **`mysql2`** driver with a pooled, **read-only** connection and parameterised queries
+only (PRD §6.2, §14.1). The app-owned `mobile_app` schema (OTP, sessions, devices, deletion
+requests, audit) lives on the **same MySQL server** with its own read/write user, migrated via
+**Knex**. Local dev/test runs against **MySQL 8.4 in Docker** (`docker compose up`) with fake
+seed data only — never Postgres or SQL Server. The backend runtime is **Node.js 22 LTS** (not
+Bun; Fastify and the observability stack are supported on Node, see `DECISIONS.md`).

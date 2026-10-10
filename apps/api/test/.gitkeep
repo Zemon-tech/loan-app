@@ -1,2 +1,0 @@
-# Vitest/Jest + supertest. Integration tests use docker-compose MySQL (PRD 18.1).
-# MUST include: cross-customer 404, blacklist scan, refresh rotation/reuse, boot guards.

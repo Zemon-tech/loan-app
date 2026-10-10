@@ -13,7 +13,7 @@
   },
   "scripts": {
     "lint": "echo \"TODO: run eslint across workspaces\" && exit 0",
-    "typecheck": "npm run typecheck --workspace @app/shared",
-    "test": "npm run test --workspace @app/shared"
+    "typecheck": "npm run typecheck --workspace @app/shared && npm run typecheck --workspace @app/api",
+    "test": "npm run test --workspace @app/shared && npm run test --workspace @app/api"
   }
 }

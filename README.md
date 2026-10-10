@@ -9,10 +9,15 @@ loan-app/
 ├── shared/        # @app/shared — pure domain logic (money, dates, schedule) + generated types
 ├── apps/
 │   ├── mobile/    # Expo (SDK 57) React Native app, Expo Router, TypeScript strict
-│   └── api/       # Fastify API (Node 22 LTS), read-only SQL Server access, OTP/JWT auth
+│   └── api/       # Express 5 API (Node 22 LTS), read-only MySQL access, OTP/JWT auth
 ├── contracts/     # openapi.yaml — single source of truth for the API
-└── docs/          # DECISIONS.md, DB_MAPPING.md, DB_ACCESS.md
+└── docs/          # BACKEND_SPEC.md, DECISIONS.md, DB_MAPPING.md, DB_ACCESS.md, SETUP.md, MOBILE_UI_UX.md
 ```
+
+The backend build reference is [`docs/BACKEND_SPEC.md`](./docs/BACKEND_SPEC.md): the delivery
+model (demo-first on mock data; later a thin anti-corruption layer over the **client's own
+API**), the app-owned `mobile_app` DB structure, the swappable `LoanRepository` seam, the full
+endpoint checklist, and the services still to build.
 
 ## Tech stack (verified latest, Oct 2026)
 
@@ -20,7 +25,7 @@ loan-app/
 - **Expo SDK 57** (React Native 0.86, React 19.2) — use `expo@57.0.17+`
 - **Expo Router** (file-based routing, routes live in `apps/mobile/src/app`)
 - **TypeScript strict**, TanStack Query, react-hook-form + zod
-- **Fastify** API, `mssql` (read-only pool — client runs **SQL Server**, not MySQL), Knex migrations (app-owned schema)
+- **Express 5** API on **Node.js 22 LTS**, `mysql2` (read-only pool — client runs **MySQL**), Knex migrations (app-owned schema)
 
 ## Setup commands (nothing is installed yet)
 
