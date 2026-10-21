@@ -3,9 +3,9 @@
  * it so Outstanding / Overdue / Next due can never be confused. Tapping opens the workspace.
  * No payment action.
  */
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { Card, Icon, ProgressBar, StatusBadge } from '@/components/ui';
+import { Card, Icon, PressableScale, ProgressBar, StatusBadge } from '@/components/ui';
 import { useAppTheme } from '@/hooks/use-theme';
 
 import { dueLabel, formatINR } from '../format';
@@ -40,12 +40,13 @@ export function LoanCard({ loan, onPress }: LoanCardProps) {
     .join('. ');
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={a11y}
       accessibilityHint="Opens loan details"
-      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+      haptic
+      activeScale={0.98}
     >
       <Card
         tone="card"
@@ -157,6 +158,6 @@ export function LoanCard({ loan, onPress }: LoanCardProps) {
           </View>
         </View>
       </Card>
-    </Pressable>
+    </PressableScale>
   );
 }

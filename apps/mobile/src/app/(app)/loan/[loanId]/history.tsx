@@ -106,6 +106,115 @@ function HistoryContent({ loan }: { loan: Loan }) {
     return { sections: [...map.values()], total: all.length };
   }, [loan, filter]);
 
+  const keyExtractor = useCallback((t: Transaction) => t.id, []);
+
+  const handleSelect = useCallback((item: Transaction) => {
+    setSelected(item);
+    setOpen(true);
+  }, []);
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: { title: string; data: Transaction[] } }) => (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: theme.spacing.lg,
+          paddingVertical: theme.spacing.sm,
+          backgroundColor: theme.colors.canvas,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+          <Text accessibilityRole="header" style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
+            {section.title}
+          </Text>
+          <View style={{ paddingVertical: 2, paddingHorizontal: theme.spacing.sm, borderRadius: theme.radius.pill, backgroundColor: theme.colors.primarySoft }}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 2, fontWeight: theme.typography.weight.semibold }}>
+              {section.data.length} {section.data.length === 1 ? 'event' : 'events'}
+            </Text>
+          </View>
+        </View>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
+          {netLabel(netCredit(section.data))}
+        </Text>
+      </View>
+    ),
+    [theme],
+  );
+
+  const renderItem = useCallback(
+    ({ item, index, section }: { item: Transaction; index: number; section: { data: Transaction[] } }) => {
+      const s = TXN_STYLE[item.type];
+      const first = index === 0;
+      const last = index === section.data.length - 1;
+      const icon = item.type === 'PAYMENT' && item.mode === 'Cash' ? 'cash-outline' : s.icon;
+      const detail = item.type === 'PAYMENT' ? (item.modeDetail ?? item.mode ?? 'Payment') : item.type === 'CHARGE' ? 'Administrative charge' : item.type === 'DISCOUNT' ? 'Concession' : 'Ledger correction';
+      const ref = item.referenceNo ? `Ref: ${item.referenceNo}` : item.receiptNo ? `Receipt: ${item.receiptNo}` : null;
+
+      return (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${item.label}, ${detail}, ${formatDate(item.date)}, ${signedAmount(item)}`}
+          accessibilityHint="Opens transaction details"
+          onPress={() => handleSelect(item)}
+          style={({ pressed }) => ({
+            marginHorizontal: theme.spacing.lg,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing.md,
+            minHeight: 76,
+            padding: theme.spacing.md,
+            backgroundColor: theme.colors.card,
+            borderTopLeftRadius: first ? theme.radius.lg : 0,
+            borderTopRightRadius: first ? theme.radius.lg : 0,
+            borderBottomLeftRadius: last ? theme.radius.lg : 0,
+            borderBottomRightRadius: last ? theme.radius.lg : 0,
+            borderBottomWidth: last ? 0 : 1,
+            borderBottomColor: theme.colors.border,
+            marginBottom: last ? theme.spacing.md : 0,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors[s.bg], alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name={icon} size={20} color={s.fg} />
+          </View>
+
+          <View style={{ flex: 1, gap: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.semibold }}>
+                {item.label}
+              </Text>
+              {s.tag ? (
+                <View style={{ paddingVertical: 1, paddingHorizontal: 6, borderRadius: theme.radius.pill, backgroundColor: theme.colors[s.bg] }}>
+                  <Text style={{ color: theme.colors[s.fg], fontSize: theme.typography.size.caption - 2, fontWeight: theme.typography.weight.semibold }}>
+                    {s.tag}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+            <Text numberOfLines={1} style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
+              {detail} {'\u2022'} {formatDate(item.date)}
+            </Text>
+            {ref ? (
+              <Text numberOfLines={1} style={{ color: theme.colors.textSecondary, opacity: 0.8, fontSize: theme.typography.size.caption - 2 }}>
+                {ref}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ color: theme.colors[s.amount], fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.bold }}>
+              {signedAmount(item)}
+            </Text>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 2 }}>{s.caption}</Text>
+          </View>
+        </Pressable>
+      );
+    },
+    [handleSelect, theme],
+  );
+
   return (
     <View style={{ flex: 1 }}>
       {/* Filter ribbon */}
@@ -160,8 +269,15 @@ function HistoryContent({ loan }: { loan: Loan }) {
 
       <SectionList
         sections={sections}
-        keyExtractor={(t) => t.id}
+        keyExtractor={keyExtractor}
         stickySectionHeadersEnabled
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        updateCellsBatchingPeriod={50}
+        removeClippedSubviews
+        renderSectionHeader={renderSectionHeader}
+        renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: insets.bottom + theme.spacing.xl }}
         ListEmptyComponent={
           <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.body, padding: theme.spacing.xl }}>
@@ -176,103 +292,6 @@ function HistoryContent({ loan }: { loan: Loan }) {
             </Text>
           </View>
         }
-        renderSectionHeader={({ section }) => (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingHorizontal: theme.spacing.lg,
-              paddingVertical: theme.spacing.sm,
-              backgroundColor: theme.colors.canvas,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-              <Text accessibilityRole="header" style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
-                {section.title}
-              </Text>
-              <View style={{ paddingVertical: 2, paddingHorizontal: theme.spacing.sm, borderRadius: theme.radius.pill, backgroundColor: theme.colors.primarySoft }}>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 2, fontWeight: theme.typography.weight.semibold }}>
-                  {section.data.length} {section.data.length === 1 ? 'event' : 'events'}
-                </Text>
-              </View>
-            </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
-              {netLabel(netCredit(section.data))}
-            </Text>
-          </View>
-        )}
-        renderItem={({ item, index, section }) => {
-          const s = TXN_STYLE[item.type];
-          const first = index === 0;
-          const last = index === section.data.length - 1;
-          const icon = item.type === 'PAYMENT' && item.mode === 'Cash' ? 'cash-outline' : s.icon;
-          const detail = item.type === 'PAYMENT' ? (item.modeDetail ?? item.mode ?? 'Payment') : item.type === 'CHARGE' ? 'Administrative charge' : item.type === 'DISCOUNT' ? 'Concession' : 'Ledger correction';
-          const ref = item.referenceNo ? `Ref: ${item.referenceNo}` : item.receiptNo ? `Receipt: ${item.receiptNo}` : null;
-
-          return (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${item.label}, ${detail}, ${formatDate(item.date)}, ${signedAmount(item)}`}
-              accessibilityHint="Opens transaction details"
-              onPress={() => {
-                setSelected(item);
-                setOpen(true);
-              }}
-              style={({ pressed }) => ({
-                marginHorizontal: theme.spacing.lg,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: theme.spacing.md,
-                minHeight: 76,
-                padding: theme.spacing.md,
-                backgroundColor: theme.colors.card,
-                borderTopLeftRadius: first ? theme.radius.lg : 0,
-                borderTopRightRadius: first ? theme.radius.lg : 0,
-                borderBottomLeftRadius: last ? theme.radius.lg : 0,
-                borderBottomRightRadius: last ? theme.radius.lg : 0,
-                borderBottomWidth: last ? 0 : 1,
-                borderBottomColor: theme.colors.border,
-                marginBottom: last ? theme.spacing.md : 0,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors[s.bg], alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name={icon} size={20} color={s.fg} />
-              </View>
-
-              <View style={{ flex: 1, gap: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.semibold }}>
-                    {item.label}
-                  </Text>
-                  {s.tag ? (
-                    <View style={{ paddingVertical: 1, paddingHorizontal: 6, borderRadius: theme.radius.pill, backgroundColor: theme.colors[s.bg] }}>
-                      <Text style={{ color: theme.colors[s.fg], fontSize: theme.typography.size.caption - 2, fontWeight: theme.typography.weight.semibold }}>
-                        {s.tag}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text numberOfLines={1} style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-                  {detail} {'\u2022'} {formatDate(item.date)}
-                </Text>
-                {ref ? (
-                  <Text numberOfLines={1} style={{ color: theme.colors.textSecondary, opacity: 0.8, fontSize: theme.typography.size.caption - 2 }}>
-                    {ref}
-                  </Text>
-                ) : null}
-              </View>
-
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ color: theme.colors[s.amount], fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.bold }}>
-                  {signedAmount(item)}
-                </Text>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 2 }}>{s.caption}</Text>
-              </View>
-            </Pressable>
-          );
-        }}
       />
 
       <TransactionSheet

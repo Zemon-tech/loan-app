@@ -1,0 +1,110 @@
+{
+  "craft": {
+    "description": "Full confirmed-brief-then-build flow. Runs multi-round shape discovery first, resolves visual probe and north-star mock gates when available, then builds and visually iterates. Use when building a new feature end-to-end.",
+    "argumentHint": "[feature description]"
+  },
+  "teach": {
+    "description": "Gathers design context for a project. Runs a multi-round discovery interview when context is missing and writes PRODUCT.md (strategic: users, brand, principles) and, when code exists to analyze, DESIGN.md (visual: colors, typography, components). Every other command reads these files before doing work. Use once per project.",
+    "argumentHint": ""
+  },
+  "document": {
+    "description": "Generate a DESIGN.md file that captures the current visual design system. Auto-extracts colors, typography, spacing, radii, and component patterns from the codebase, then asks the user to confirm descriptive language for atmosphere and color character. Follows the Google Stitch DESIGN.md format so the file is tool-compatible. Use when you need a visual design spec an AI agent can follow to stay on-brand.",
+    "argumentHint": ""
+  },
+  "extract": {
+    "description": "Pull reusable patterns, components, and design tokens into the design system. Identifies repeated patterns and consolidates them. Use when you have drift across the codebase and want to bring things back to a consistent system.",
+    "argumentHint": "[target]"
+  },
+  "adapt": {
+    "description": "Adapt designs to work across different screen sizes, devices, contexts, or platforms. Implements breakpoints, fluid layouts, and touch targets. Use when the user mentions responsive design, mobile layouts, breakpoints, viewport adaptation, or cross-device compatibility.",
+    "argumentHint": "[target] [context (mobile, tablet, print...)]"
+  },
+  "animate": {
+    "description": "Review a feature and enhance it with purposeful animations, micro-interactions, and motion effects that improve usability and delight. Use when the user mentions adding animation, transitions, micro-interactions, motion design, hover effects, or making the UI feel more alive.",
+    "argumentHint": "[target]"
+  },
+  "audit": {
+    "description": "Run technical quality checks across accessibility, performance, theming, responsive design, and anti-patterns. Generates a scored report with P0-P3 severity ratings and actionable plan. Use when the user wants an accessibility check, performance audit, or technical quality review.",
+    "argumentHint": "[area (feature, page, component...)]"
+  },
+  "bolder": {
+    "description": "Amplify safe or boring designs to make them more visually interesting and stimulating. Increases impact while maintaining usability. Use when the user says the design looks bland, generic, too safe, lacks personality, or wants more visual impact and character.",
+    "argumentHint": "[target]"
+  },
+  "clarify": {
+    "description": "Improve unclear UX copy, error messages, microcopy, labels, and instructions to make interfaces easier to understand. Use when the user mentions confusing text, unclear labels, bad error messages, hard-to-follow instructions, or wanting better UX writing.",
+    "argumentHint": "[target]"
+  },
+  "colorize": {
+    "description": "Add strategic color to features that are too monochromatic or lack visual interest, making interfaces more engaging and expressive. Use when the user mentions the design looking gray, dull, lacking warmth, needing more color, or wanting a more vibrant or expressive palette.",
+    "argumentHint": "[target]"
+  },
+  "critique": {
+    "description": "Evaluate design from a UX perspective, assessing visual hierarchy, information architecture, emotional resonance, cognitive load, and overall quality with quantitative scoring, persona-based testing, automated anti-pattern detection, and actionable feedback. Use when the user asks to review, critique, evaluate, or give feedback on a design or component.",
+    "argumentHint": "[area (feature, page, component...)]"
+  },
+  "delight": {
+    "description": "Add moments of joy, personality, and unexpected touches that make interfaces memorable and enjoyable to use. Elevates functional to delightful. Use when the user asks to add polish, personality, animations, micro-interactions, delight, or make an interface feel fun or memorable.",
+    "argumentHint": "[target]"
+  },
+  "distill": {
+    "description": "Strip designs to their essence by removing unnecessary complexity. Great design is simple, powerful, and clean. Use when the user asks to simplify, declutter, reduce noise, remove elements, or make a UI cleaner and more focused.",
+    "argumentHint": "[target]"
+  },
+  "harden": {
+    "description": "Make interfaces production-ready: error handling, i18n, text overflow, edge case management, and resilience under real-world data. Use when the user asks to harden, make production-ready, handle edge cases, add error states, or fix overflow and i18n issues.",
+    "argumentHint": "[target]"
+  },
+  "onboard": {
+    "description": "Design onboarding flows, first-run experiences, and empty states that guide new users to value. Covers welcome screens, account setup, progressive disclosure, contextual tooltips, feature announcements, and activation moments. Use when the user mentions onboarding, first-time users, empty states, activation, getting started, new user flows, or the aha moment.",
+    "argumentHint": "[target]"
+  },
+  "layout": {
+    "description": "Improve layout, spacing, and visual rhythm. Fixes monotonous grids, inconsistent spacing, and weak visual hierarchy. Use when the user mentions layout feeling off, spacing issues, visual hierarchy, crowded UI, alignment problems, or wanting better composition.",
+    "argumentHint": "[target]"
+  },
+  "optimize": {
+    "description": "Diagnoses and fixes UI performance across loading speed, rendering, animations, images, and bundle size. Use when the user mentions slow, laggy, janky, performance, bundle size, load time, or wants a faster, smoother experience.",
+    "argumentHint": "[target]"
+  },
+  "overdrive": {
+    "description": "Pushes interfaces past conventional limits with technically ambitious implementations — shaders, spring physics, scroll-driven reveals, 60fps animations. Use when the user wants to wow, impress, go all-out, or make something that feels extraordinary.",
+    "argumentHint": "[target]"
+  },
+  "polish": {
+    "description": "Performs a final quality pass fixing alignment, spacing, consistency, and micro-detail issues before shipping. Use when the user mentions polish, finishing touches, pre-launch review, something looks off, or wants to go from good to great.",
+    "argumentHint": "[target]"
+  },
+  "quieter": {
+    "description": "Tones down visually aggressive or overstimulating designs, reducing intensity while preserving quality. Use when the user mentions too bold, too loud, overwhelming, aggressive, garish, or wants a calmer, more refined aesthetic.",
+    "argumentHint": "[target]"
+  },
+  "rethink": {
+    "description": "Purpose-driven redesign of a component within the existing brand. Treats tokens as read-only vocabulary; the creative work is making every UI choice — weight, density, prominence, motion, hierarchy — trace back to the component's role in the choreography. Scans token surface (read-only), usage sites, flow neighbors, and sibling treatment on shared screens, then forces five purpose questions before any visual decision. Default after a rebrand or migration when tokens are freshly authoritative and UI needs to catch up. For questioning the design system itself, use break instead.",
+    "argumentHint": "[target]"
+  },
+  "break": {
+    "description": "Reimagine a screen or component from scratch and break the design system to do it — including radical changes to color, style, and overall vibe — then reconcile that vision with the existing tokens via a KEEP / UPDATE / NEW disposition per token, surfacing blast radius before any value change. Use when the component's design is wrong at the concept level AND the existing tokens are part of what's wrong. For brand-respecting purpose-driven redesign, use rethink.",
+    "argumentHint": "[target]"
+  },
+  "flow": {
+    "description": "Design the experience of moving through the app as a user journey — not just a navigation graph. Two modes: 'create <brief>' designs a journey from scratch; 'rethink <name>' scans the current app, locates a named journey, critiques it, and reshapes it. Outputs a per-screen blueprint (intent, emotional beat, key decision, friction notes, primary action, exit) and a technical scaffold (route files or Stack.Screen entries with stubs) ready for /craft. Use when shaping or reshaping a journey — onboarding, checkout, settings discovery, first-run, recovery flows.",
+    "argumentHint": "create <brief> | rethink <name>"
+  },
+  "migration": {
+    "description": "Replace an app's entire design system across a flow or the whole app. Runs four reconnaissance scripts (scope resolution, token co-occurrence graph with Jaccard clustering, Tarjan SCC dependency ordering, hardcoded violation scan) to produce a phased migration brief before any file is touched. Use when the design system is wrong at the concept level, a rebrand requires replacing all tokens, or the team is adopting a new theming approach.",
+    "argumentHint": "--scope=<app|flow:name|routes:glob>"
+  },
+  "rebrand": {
+    "description": "Author a brand-new design system from scratch for an existing app. Two-act skill: Act 1 (scan) runs forensics on the current visual surface — perceptual color clustering (CIEDE2000), incoherence hunting, vibe fingerprinting; Act 2 (direction) interrogates position with 5-7 questions then generates three genuinely divergent brand directions across six axes (temperature, density, voice, posture, era, convention), each a complete brand with token system and ASCII mockup. User picks or remixes; skill writes brand-brief.json that /migration consumes directly. Use when the foundation is strong but the brand is wrong, or when a vibecoded app has drifted into a mashup of styles.",
+    "argumentHint": "scan | direction | resume"
+  },
+  "shape": {
+    "description": "Plan UX and UI before code. Runs a required multi-round discovery interview, uses visual probes when available, and produces a user-confirmed design brief for implementation.",
+    "argumentHint": "[feature to shape]"
+  },
+  "typeset": {
+    "description": "Improves typography by fixing font choices, hierarchy, sizing, weight, and readability so text feels intentional. Use when the user mentions fonts, type, readability, text hierarchy, sizing looks off, or wants more polished, intentional typography.",
+    "argumentHint": "[target]"
+  }
+}

@@ -36,3 +36,5 @@ export { Skeleton, SkeletonGroup } from './Skeleton';
 export type { SkeletonProps } from './Skeleton';
 export { StateView, StateScroll } from './StateView';
 export type { StateViewProps, StateAction } from './StateView';
+export { PressableScale } from './PressableScale';
+export type { PressableScaleProps } from './PressableScale';

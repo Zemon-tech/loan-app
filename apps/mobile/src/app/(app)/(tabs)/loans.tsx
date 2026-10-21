@@ -1,23 +1,21 @@
 /**
  * S5: Home (tab) — answers in seconds: how much do I owe, am I overdue, what is due next,
  * which loans do I have, how far along am I. Purely informational: no payment action.
- *
- * States (same Loan Card everywhere): one active loan, multiple active loans,
- * active + closed, all closed. Preview with EXPO_PUBLIC_MOCK_LOANS.
- *
- * SINGLE-LOAN SHORTCUT (decision b, docs/DECISIONS.md): the real app opens the workspace
- * directly for exactly 1 loan. The prototype always shows the list.
- *
- * TODO (M-05):
- *  - GET /v1/loans; skeleton / empty / error states; pull-to-refresh
- *  - notifications bell (Phase 2)
- *  - format money via @app/shared formatINR; strings to i18n
+ * Sticky header pinned at the top while content scrolls smoothly beneath.
  */
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  FadeOutUp,
+  LinearTransition,
+  ReduceMotion,
+} from 'react-native-reanimated';
 
-import { BrandMark, Card, Icon, IconTile, ScreenContainer } from '@/components/ui';
+import { BrandMark, Card, Icon, IconTile, PressableScale, ScreenContainer } from '@/components/ui';
 import { HomeSkeleton } from '@/features/system/components/Skeletons';
 import { LoadErrorState, NoLoansState, OfflineBanner } from '@/features/system/components/SystemStates';
 import { useMockQuery } from '@/features/system/mockQuery';
@@ -109,14 +107,14 @@ function HomeContent({ loans }: { loans: Loan[] }) {
     fontWeight: theme.typography.weight.medium,
   } as const;
 
-  return (
-    <ScreenContainer tone="canvas" bottomInset={false}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+  const homeHeader = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, flex: 1 }}>
         <BrandMark size={36} />
         <View style={{ flex: 1 }}>
           <Text
             accessibilityRole="header"
+            numberOfLines={1}
             style={{
               color: theme.colors.textPrimary,
               fontSize: theme.typography.size.title,
@@ -125,91 +123,109 @@ function HomeContent({ loans }: { loans: Loan[] }) {
           >
             {greeting()}, {PLACEHOLDER_CUSTOMER.firstName}
           </Text>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
+          <Text numberOfLines={1} style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
             Here&apos;s your loan summary
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open profile"
-          onPress={() => router.navigate('/account')}
-          style={({ pressed }) => ({
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: theme.colors.primarySoft,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <Text style={{ color: theme.colors.primary, fontWeight: theme.typography.weight.semibold }}>
-            {PLACEHOLDER_CUSTOMER.initials}
-          </Text>
-        </Pressable>
       </View>
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel="Open profile"
+        onPress={() => router.navigate('/account')}
+        haptic
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 21,
+          backgroundColor: theme.colors.primarySoft,
+          borderWidth: 1.5,
+          borderColor: theme.colors.primary,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text
+          style={{
+            color: theme.colors.primary,
+            fontSize: theme.typography.size.body,
+            fontWeight: theme.typography.weight.bold,
+            textAlign: 'center',
+            textAlignVertical: 'center',
+            includeFontPadding: false,
+            lineHeight: 20,
+          }}
+        >
+          {PLACEHOLDER_CUSTOMER.initials}
+        </Text>
+      </PressableScale>
+    </View>
+  );
 
+  return (
+    <ScreenContainer tone="canvas" bottomInset={false} header={homeHeader}>
       <OfflineBanner />
 
       {/* Summary */}
-      <Card
-        tone="card"
-        style={{ borderRadius: theme.radius.xl, padding: theme.spacing.lg, gap: theme.spacing.md }}
-      >
-        <Text style={label}>{allClosed ? 'Total outstanding' : 'Total outstanding (all active loans)'}</Text>
-        <Text
-          accessibilityLabel={`Total outstanding ${formatINR(summary.totalOutstanding)}`}
-          style={{
-            color: theme.colors.textPrimary,
-            fontSize: theme.typography.size.heading + 8,
-            fontWeight: theme.typography.weight.bold,
-          }}
+      <Animated.View entering={FadeIn.duration(300).reduceMotion(ReduceMotion.System)}>
+        <Card
+          tone="card"
+          style={{ borderRadius: theme.radius.xl, padding: theme.spacing.lg, gap: theme.spacing.md }}
         >
-          {formatINR(summary.totalOutstanding)}
-        </Text>
+          <Text style={label}>{allClosed ? 'Total outstanding' : 'Total outstanding (all active loans)'}</Text>
+          <Text
+            accessibilityLabel={`Total outstanding ${formatINR(summary.totalOutstanding)}`}
+            style={{
+              color: theme.colors.textPrimary,
+              fontSize: theme.typography.size.heading + 8,
+              fontWeight: theme.typography.weight.bold,
+            }}
+          >
+            {formatINR(summary.totalOutstanding)}
+          </Text>
 
-        {allClosed ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-            <Icon name="checkmark-circle" size={20} color="success" />
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, flex: 1 }}>
-              You have no active loans. All your loans are fully paid.
-            </Text>
-          </View>
-        ) : (
-          <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-            <SummaryStat
-              label="Active loans"
-              value={String(activeLoans.length)}
-              sub={activeLoans.length === 1 ? 'loan' : 'loans'}
-            />
-            <SummaryStat
-              label="Overdue"
-              value={formatINR(summary.overdueTotal)}
-              sub={
-                summary.overdueTotal > 0
-                  ? `on ${summary.overdueLoanCount} ${summary.overdueLoanCount === 1 ? 'loan' : 'loans'}`
-                  : 'none'
-              }
-              tone={summary.overdueTotal > 0 ? 'danger' : 'neutral'}
-              icon={summary.overdueTotal > 0 ? 'warning' : undefined}
-            />
-            <SummaryStat
-              label="Next due"
-              value={summary.nextDue ? formatINR(summary.nextDue.amount) : '\u2014'}
-              sub={summary.nextDue ? dueLabel(summary.nextDue.date).replace('Due ', '') : ''}
-              tone="primary"
-            />
-          </View>
-        )}
+          {allClosed ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Icon name="checkmark-circle" size={20} color="success" />
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, flex: 1 }}>
+                You have no active loans. All your loans are fully paid.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+              <SummaryStat
+                label="Active loans"
+                value={String(activeLoans.length)}
+                sub={activeLoans.length === 1 ? 'loan' : 'loans'}
+              />
+              <SummaryStat
+                label="Overdue"
+                value={formatINR(summary.overdueTotal)}
+                sub={
+                  summary.overdueTotal > 0
+                    ? `on ${summary.overdueLoanCount} ${summary.overdueLoanCount === 1 ? 'loan' : 'loans'}`
+                    : 'none'
+                }
+                tone={summary.overdueTotal > 0 ? 'danger' : 'neutral'}
+                icon={summary.overdueTotal > 0 ? 'warning' : undefined}
+              />
+              <SummaryStat
+                label="Next due"
+                value={summary.nextDue ? formatINR(summary.nextDue.amount) : '\u2014'}
+                sub={summary.nextDue ? dueLabel(summary.nextDue.date).replace('Due ', '') : ''}
+                tone="primary"
+              />
+            </View>
+          )}
 
-        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-          Last updated 10 mins ago
-        </Text>
-      </Card>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
+            Last updated 10 mins ago
+          </Text>
+        </Card>
+      </Animated.View>
 
       {/* Active loans */}
       {activeLoans.length > 0 ? (
-        <>
+        <View style={{ gap: theme.spacing.md }}>
           <Text
             accessibilityRole="header"
             style={{
@@ -220,15 +236,23 @@ function HomeContent({ loans }: { loans: Loan[] }) {
           >
             Your loans
           </Text>
-          {activeLoans.map((loan) => (
-            <LoanCard key={loan.loanId} loan={loan} onPress={() => openLoan(loan.loanId)} />
+          {activeLoans.map((loan, index) => (
+            <Animated.View
+              key={loan.loanId}
+              entering={FadeInDown.duration(280)
+                .delay(index * 60)
+                .reduceMotion(ReduceMotion.System)}
+            >
+              <LoanCard loan={loan} onPress={() => openLoan(loan.loanId)} />
+            </Animated.View>
           ))}
-        </>
+        </View>
       ) : null}
 
-      {/* Closed loans — quieter than active ones */}
+      {/* Closed loans — quieter than active ones with smooth layout animation */}
       {closedLoans.length > 0 ? (
-        <View
+        <Animated.View
+          layout={LinearTransition.duration(220).easing(Easing.out(Easing.cubic))}
           style={{
             borderRadius: theme.radius.lg,
             backgroundColor: theme.colors.surface,
@@ -262,36 +286,41 @@ function HomeContent({ loans }: { loans: Loan[] }) {
 
           {closedOpen
             ? closedLoans.map((loan) => (
-                <Pressable
+                <Animated.View
                   key={loan.loanId}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Closed loan ${loan.accountNumber}, ${loan.productName}. Fully paid.`}
-                  onPress={() => openLoan(loan.loanId)}
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: theme.spacing.md,
-                    minHeight: theme.touchTarget.min + 8,
-                    paddingHorizontal: theme.spacing.lg,
-                    borderTopWidth: 1,
-                    borderTopColor: theme.colors.border,
-                    opacity: pressed ? 0.7 : 1,
-                  })}
+                  entering={FadeInDown.duration(180).reduceMotion(ReduceMotion.System)}
+                  exiting={FadeOutUp.duration(120).reduceMotion(ReduceMotion.System)}
                 >
-                  <IconTile name="checkmark-circle-outline" size={36} background="successSoft" color="success" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.medium }}>
-                      {loan.accountNumber} {'\u2022'} {loan.productName}
-                    </Text>
-                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-                      Fully paid {'\u2022'} {loan.emisPaid} of {loan.totalEmis} EMIs
-                    </Text>
-                  </View>
-                  <Icon name="chevron-forward" size={18} color="textSecondary" />
-                </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Closed loan ${loan.accountNumber}, ${loan.productName}. Fully paid.`}
+                    onPress={() => openLoan(loan.loanId)}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: theme.spacing.md,
+                      minHeight: theme.touchTarget.min + 8,
+                      paddingHorizontal: theme.spacing.lg,
+                      borderTopWidth: 1,
+                      borderTopColor: theme.colors.border,
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <IconTile name="checkmark-circle-outline" size={36} background="successSoft" color="success" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.medium }}>
+                        {loan.accountNumber} {'\u2022'} {loan.productName}
+                      </Text>
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
+                        Fully paid {'\u2022'} {loan.emisPaid} of {loan.totalEmis} EMIs
+                      </Text>
+                    </View>
+                    <Icon name="chevron-forward" size={18} color="textSecondary" />
+                  </Pressable>
+                </Animated.View>
               ))
             : null}
-        </View>
+        </Animated.View>
       ) : null}
     </ScreenContainer>
   );

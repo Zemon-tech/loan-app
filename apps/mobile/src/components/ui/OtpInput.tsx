@@ -1,11 +1,18 @@
 /**
  * OtpInput — six-cell one-time-code input (PRD F-07).
- * A single invisible TextInput receives all typing, paste and SMS autofill
- * (textContentType="oneTimeCode" / autoComplete="sms-otp"; no READ_SMS permission),
- * while the cells only render the value.
+ * Features subtle cell pop animations on digit entry, error shake animation,
+ * and selection haptics.
  */
-import { useRef, useState } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { useAppTheme } from '@/hooks/use-theme';
 
@@ -30,12 +37,36 @@ export function OtpInput({
   onComplete,
 }: OtpInputProps) {
   const theme = useAppTheme();
+  const reduceMotion = useReducedMotion();
   const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
   const activeIndex = Math.min(value.length, length - 1);
 
+  const shakeOffset = useSharedValue(0);
+
+  useEffect(() => {
+    if (hasError && !reduceMotion) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      shakeOffset.value = withSequence(
+        withTiming(-8, { duration: 60 }),
+        withTiming(8, { duration: 60 }),
+        withTiming(-6, { duration: 60 }),
+        withTiming(6, { duration: 60 }),
+        withTiming(-3, { duration: 60 }),
+        withTiming(0, { duration: 60 }),
+      );
+    }
+  }, [hasError, reduceMotion, shakeOffset]);
+
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeOffset.value }],
+  }));
+
   function handleChange(text: string) {
     const next = text.replace(/\D/g, '').slice(0, length);
+    if (next.length > value.length) {
+      Haptics.selectionAsync().catch(() => {});
+    }
     onChange(next);
     if (next.length === length) onComplete?.(next);
   }
@@ -46,7 +77,13 @@ export function OtpInput({
       accessible={false}
       style={{ height: 56 }}
     >
-      <View style={{ flexDirection: 'row', gap: theme.spacing.sm, height: 56 }} pointerEvents="none">
+      <Animated.View
+        style={[
+          { flexDirection: 'row', gap: theme.spacing.sm, height: 56 },
+          shakeStyle,
+        ]}
+        pointerEvents="none"
+      >
         {Array.from({ length }).map((_, i) => {
           const char = value[i];
           const isActive = focused && i === activeIndex;
@@ -95,7 +132,7 @@ export function OtpInput({
             </View>
           );
         })}
-      </View>
+      </Animated.View>
 
       <TextInput
         ref={inputRef}

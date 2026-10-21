@@ -122,6 +122,23 @@ export const AppTypography = {
 export const AppTouchTarget = { min: 44 } as const;
 
 /**
+ * Motion tokens (impeccable-native motion vocabulary).
+ * Timing and spring presets for 60-120Hz native animations.
+ */
+export const AppMotion = {
+  duration: {
+    fast: 150,
+    normal: 250,
+    slow: 400,
+  },
+  spring: {
+    snappy: { damping: 28, stiffness: 300, mass: 1, overshootClamping: true },
+    gentle: { damping: 24, stiffness: 180, mass: 1, overshootClamping: true },
+    soft: { damping: 30, stiffness: 100, mass: 1, overshootClamping: true },
+  },
+} as const;
+
+/**
  * Installment / status colour mapping (PRD 6.4).
  * ALWAYS pair the colour with a text label and an icon — never colour alone.
  */
@@ -149,6 +166,7 @@ export type AppTheme = {
   radius: typeof AppRadius;
   typography: typeof AppTypography;
   touchTarget: typeof AppTouchTarget;
+  motion: typeof AppMotion;
 };
 
 export function getAppTheme(scheme: AppColorScheme): AppTheme {
@@ -159,5 +177,6 @@ export function getAppTheme(scheme: AppColorScheme): AppTheme {
     radius: AppRadius,
     typography: AppTypography,
     touchTarget: AppTouchTarget,
+    motion: AppMotion,
   };
 }

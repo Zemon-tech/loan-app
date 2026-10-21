@@ -1,14 +1,7 @@
 /**
  * ScreenContainer — themed page wrapper with correct safe-area spacing on iOS, Android
- * (edge-to-edge) and web. Most screens render inside this.
- *
- * Spacing rules:
- *  - top: status bar / notch inset + a small gap, so headers never touch the system bar
- *  - bottom: home-indicator inset + a comfortable gap. Screens that sit ABOVE the tab bar pass
- *    `bottomInset={false}`: the tab bar already owns that inset, so only the gap is added.
- *  - sides: 16 (spacing.lg), with 16 between blocks
- *
- * Pass `scroll={false}` for non-scrolling screens.
+ * (edge-to-edge) and web.
+ * Supports an optional sticky `header` that remains pinned at the top while content scrolls beneath.
  */
 import type { ReactNode } from 'react';
 import {
@@ -25,6 +18,7 @@ import { useAppTheme } from '@/hooks/use-theme';
 
 export interface ScreenContainerProps {
   children: ReactNode;
+  header?: ReactNode;
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
   /** 'canvas' uses the lavender page tint used by the entry / auth screens. */
@@ -35,6 +29,7 @@ export interface ScreenContainerProps {
 
 export function ScreenContainer({
   children,
+  header,
   scroll = true,
   contentStyle,
   tone = 'background',
@@ -43,9 +38,9 @@ export function ScreenContainer({
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
 
-  const padding = {
+  const scrollPadding = {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: insets.top + theme.spacing.sm,
+    paddingTop: header ? theme.spacing.sm : insets.top + theme.spacing.sm,
     paddingBottom: (bottomInset ? insets.bottom : 0) + theme.spacing.xl,
     gap: theme.spacing.lg,
   };
@@ -55,16 +50,29 @@ export function ScreenContainer({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: theme.colors[tone] }}
     >
+      {header ? (
+        <View
+          style={{
+            paddingHorizontal: theme.spacing.lg,
+            paddingTop: insets.top + theme.spacing.sm,
+            paddingBottom: theme.spacing.md,
+            backgroundColor: theme.colors[tone],
+            zIndex: 10,
+          }}
+        >
+          {header}
+        </View>
+      ) : null}
       {scroll ? (
         <ScrollView
-          contentContainerStyle={[padding, { flexGrow: 1 }, contentStyle]}
+          contentContainerStyle={[scrollPadding, { flexGrow: 1 }, contentStyle]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           {children}
         </ScrollView>
       ) : (
-        <View style={[{ flex: 1 }, padding, contentStyle]}>{children}</View>
+        <View style={[{ flex: 1 }, scrollPadding, contentStyle]}>{children}</View>
       )}
     </KeyboardAvoidingView>
   );

@@ -3,13 +3,14 @@
  * A row is a button when `onPress` is set; pass `right` for a switch or custom trailing content.
  */
 import { Children, type ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { useAppTheme } from '@/hooks/use-theme';
 
 import { Card } from './Card';
 import { Icon, type IconName } from './Icon';
 import { IconTile } from './IconTile';
+import { PressableScale } from './PressableScale';
 
 export function SectionLabel({ children }: { children: string }) {
   const theme = useAppTheme();
@@ -117,14 +118,15 @@ export function SettingsRow({
   if (!onPress) return content;
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={value ? `${title}, ${value}` : title}
       accessibilityHint={accessibilityHint}
       onPress={onPress}
-      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      haptic
+      activeScale={0.98}
     >
       {content}
-    </Pressable>
+    </PressableScale>
   );
 }

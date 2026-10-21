@@ -1,21 +1,18 @@
 /**
  * S9: Profile (tab) — calm identity page, quick links, lender info and log out (PRD 8.9).
  * Not a social profile: no photo upload, no edit, no stats.
- *
- * TODO (M-09):
- *  - GET /v1/me for name / mobile / city; photo if `photoUrl`
- *  - lender details from GET /v1/config; strings to i18n
  */
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   BrandMark,
   Card,
   Icon,
+  PressableScale,
   ScreenContainer,
   SectionLabel,
   SettingsGroup,
@@ -59,12 +56,31 @@ export default function ProfileScreen() {
 
       {/* Identity */}
       <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.lg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.lg }}>
           <View
             accessibilityElementsHidden
-            style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: theme.colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: theme.colors.primarySoft,
+              borderWidth: 2,
+              borderColor: theme.colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <Text style={{ color: theme.colors.primary, fontSize: theme.typography.size.title, fontWeight: theme.typography.weight.bold }}>
+            <Text
+              style={{
+                color: theme.colors.primary,
+                fontSize: theme.typography.size.title,
+                fontWeight: theme.typography.weight.bold,
+                textAlign: 'center',
+                textAlignVertical: 'center',
+                includeFontPadding: false,
+                lineHeight: 24,
+              }}
+            >
               {PLACEHOLDER_CUSTOMER.initials}
             </Text>
           </View>
@@ -177,26 +193,40 @@ export default function ProfileScreen() {
       </View>
 
       {/* Log out */}
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel="Log out of Loan Tracker"
         onPress={() => setLogoutOpen(true)}
-        style={({ pressed }) => ({
+        haptic
+        style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: theme.spacing.sm,
           minHeight: 52,
+          paddingHorizontal: theme.spacing.lg,
           borderRadius: theme.radius.lg,
           backgroundColor: theme.colors.card,
-          opacity: pressed ? 0.7 : 1,
-        })}
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        }}
       >
-        <Icon name="log-out-outline" size={20} color="danger" />
-        <Text style={{ color: theme.colors.danger, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.semibold }}>
+        <View style={{ width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="log-out-outline" size={20} color="danger" />
+        </View>
+        <Text
+          style={{
+            color: theme.colors.danger,
+            fontSize: theme.typography.size.body,
+            fontWeight: theme.typography.weight.semibold,
+            textAlignVertical: 'center',
+            includeFontPadding: false,
+            lineHeight: 22,
+          }}
+        >
           Log out of Loan Tracker
         </Text>
-      </Pressable>
+      </PressableScale>
 
       <View style={{ alignItems: 'center', gap: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

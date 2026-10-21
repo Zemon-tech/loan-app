@@ -1,22 +1,29 @@
 /**
  * Skeleton + SkeletonGroup — calm loading placeholders that mirror the final layout.
- * One shared pulse drives every bar in a group. Respects the OS "reduce motion" setting.
- * The group is announced once as "Loading" instead of every bar being read out.
+ * Driven by Reanimated 4 UI-thread worklets with smooth repeat animation.
+ * Respects OS reduce motion setting and accessibility guidelines.
  */
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import {
-  AccessibilityInfo,
-  Animated,
-  Platform,
   View,
   type DimensionValue,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 import { useAppTheme } from '@/hooks/use-theme';
 
-const PulseContext = createContext<Animated.Value | null>(null);
+const PulseContext = createContext<SharedValue<number> | null>(null);
 
 export function SkeletonGroup({
   children,
@@ -27,25 +34,23 @@ export function SkeletonGroup({
   label?: string;
   style?: StyleProp<ViewStyle>;
 }) {
-  const [pulse] = useState(() => new Animated.Value(0));
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const pulse = useSharedValue(reduceMotion ? 0.7 : 0.45);
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
-  }, []);
-
-  useEffect(() => {
-    if (reduceMotion) return;
-    const useNativeDriver = Platform.OS !== 'web';
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse, reduceMotion]);
+    if (reduceMotion) {
+      pulse.value = 0.7;
+    } else {
+      pulse.value = withRepeat(
+        withSequence(
+          withTiming(0.92, { duration: 750, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.45, { duration: 750, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+        true,
+      );
+    }
+  }, [reduceMotion, pulse]);
 
   return (
     <PulseContext.Provider value={reduceMotion ? null : pulse}>
@@ -74,6 +79,10 @@ export function Skeleton({ width = '100%', height = 14, radius = 6, style }: Ske
   const theme = useAppTheme();
   const pulse = useContext(PulseContext);
 
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: pulse ? pulse.value : 0.65,
+  }));
+
   return (
     <Animated.View
       style={[
@@ -82,8 +91,8 @@ export function Skeleton({ width = '100%', height = 14, radius = 6, style }: Ske
           height,
           borderRadius: radius,
           backgroundColor: theme.colors.border,
-          opacity: pulse ? pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.95] }) : 0.7,
         },
+        animatedStyle,
         style,
       ]}
     />
