@@ -4,6 +4,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandMark, Pill, ScreenContainer } from '@/components/ui';
+import { apiMode } from '@/features/api/config';
 import { fetchBootConfig } from '@/features/boot/bootConfig';
 import { useSession } from '@/features/auth/session';
 import { useAppTheme } from '@/hooks/use-theme';
@@ -13,30 +14,35 @@ const MIN_SPLASH_MS = 1200;
 
 /**
  * S1: Splash / Boot. Minimal, calm, secure-feeling.
- * Checks the boot config, then routes to one of:
- *   Maintenance | Update required | Unlock | My Loans | Login.
+ * Routes to one of: Maintenance | Update required | Unlock | My Loans | Login.
  *
- * TODO (S1 boot flow): swap the mock config for GET /v1/config and attempt
- * refresh-token rehydration before deciding between Unlock / Login.
+ * Live mode: there is no /config endpoint (api-guide) — skip fetchBootConfig() entirely and
+ * treat boot status as 'ok', then rehydrate the session (a stored refresh token) before choosing
+ * a destination. Mock mode keeps the EXPO_PUBLIC_MOCK_BOOT-driven maintenance/update previews.
  */
 export default function SplashScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const { isLoggedIn, isAppLockEnabled, isLocked } = useSession();
+  const { isLoggedIn, isAppLockEnabled, isLocked, isBootstrapping } = useSession();
   const [destination, setDestination] = useState<Href | null>(null);
 
   useEffect(() => {
+    // Wait for the session provider's boot rehydration to finish (live mode).
+    if (isBootstrapping) return;
     let cancelled = false;
 
     async function boot() {
-      const [config] = await Promise.all([
-        fetchBootConfig(),
+      const live = apiMode() === 'live';
+      const [status] = await Promise.all([
+        // Live mode has no /config endpoint — skip the call and treat status as 'ok'.
+        live ? Promise.resolve('ok' as const) : fetchBootConfig().then((c) => c.status),
         new Promise((resolve) => setTimeout(resolve, MIN_SPLASH_MS)),
       ]);
       if (cancelled) return;
 
-      if (config.status === 'maintenance') return setDestination('/maintenance');
-      if (config.status === 'update_required') return setDestination('/update-required');
+      // Maintenance / update-required only reachable in mock mode (no /config endpoint live).
+      if (status === 'maintenance') return setDestination('/maintenance');
+      if (status === 'update_required') return setDestination('/update-required');
       if (!isLoggedIn) return setDestination('/login');
       if (isAppLockEnabled && isLocked) return setDestination('/unlock');
       return setDestination('/loans');
@@ -46,9 +52,9 @@ export default function SplashScreen() {
     return () => {
       cancelled = true;
     };
-    // Boot decision is made once on mount.
+    // Boot decision runs once rehydration completes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isBootstrapping]);
 
   // <Redirect> (not router.replace in an effect) avoids an unhandled GO_BACK on the first screen.
   if (destination) return <Redirect href={destination} />;

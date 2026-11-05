@@ -106,6 +106,72 @@ export function todayIST(now: Date = new Date()): IsoDate {
   return fromUtcAnchor(new Date(istMs));
 }
 
+const ISO_DATETIME_RE =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(Z|[+-]\d{2}:\d{2})?$/;
+
+/**
+ * Convert an ISO-8601 date or datetime string to an IST calendar date (YYYY-MM-DD).
+ *
+ * The API guide returns ISO-8601 datetimes (documented as zoneless, e.g.
+ * `2026-04-01T00:00:00`). The adapter turns these into the domain's IST calendar date.
+ *
+ * Accepts:
+ *   - date-only:         '2026-04-01'            -> '2026-04-01'
+ *   - zoneless datetime: '2026-04-01T00:00:00'   -> '2026-04-01' (date part, verbatim)
+ *   - zoned datetime:    '2026-04-01T20:00:00Z'  -> shifted into IST, then the date part
+ *                        '2026-04-01T18:30:00+05:30' likewise
+ *
+ * Rationale for the zoneless case: an Indian NBFC's business dates are IST wall-clock, so
+ * taking the UTC date would risk an off-by-one that misreports a loan's start/maturity date.
+ * Throws TypeError on anything it cannot parse.
+ */
+export function isoDateTimeToIstDate(input: string): IsoDate {
+  if (typeof input !== 'string') {
+    throw new TypeError(`Invalid ISO date-time: ${String(input)}`);
+  }
+
+  const tIndex = input.indexOf('T');
+
+  // Date-only: validate and return verbatim.
+  if (tIndex === -1) {
+    parseIsoDate(input); // throws on malformed date
+    return input;
+  }
+
+  const m = ISO_DATETIME_RE.exec(input);
+  if (!m) throw new TypeError(`Invalid ISO date-time: ${input}`);
+
+  const datePart = `${m[1]}-${m[2]}-${m[3]}`;
+  const { year, month, day } = parseIsoDate(datePart); // throws on malformed date
+
+  const hh = Number(m[4]);
+  const mm = Number(m[5]);
+  const ss = m[6] === undefined ? 0 : Number(m[6]);
+  if (hh > 23 || mm > 59 || ss > 59) {
+    throw new RangeError(`Invalid time in ${input}`);
+  }
+
+  const zone = m[7];
+
+  // Zoneless datetime: treat as IST wall-clock; the date part is the IST calendar date.
+  if (zone === undefined) {
+    return datePart;
+  }
+
+  // Zoned datetime: compute the true UTC epoch, then anchor on the IST calendar date.
+  let offsetMs = 0;
+  if (zone !== 'Z') {
+    const sign = zone[0] === '-' ? -1 : 1;
+    const offHours = Number(zone.slice(1, 3));
+    const offMinutes = Number(zone.slice(4, 6));
+    offsetMs = sign * (offHours * 60 + offMinutes) * 60 * 1000;
+  }
+
+  // Date.UTC treats the parts as if they were UTC; subtract the source offset to get true UTC.
+  const utcMs = Date.UTC(year, month - 1, day, hh, mm, ss) - offsetMs;
+  return fromUtcAnchor(new Date(utcMs + IST_OFFSET_MS));
+}
+
 const MONTHS_SHORT = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',

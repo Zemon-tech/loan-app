@@ -1,26 +1,26 @@
 /**
- * LoanCard — the single reusable card for a loan (Home list). Every number has a label beside
- * it so Outstanding / Overdue / Next due can never be confused. Tapping opens the workspace.
- * No payment action.
+ * LoanCard — the single reusable card for a loan (Home list). Takes a LoanListItemVM (live and
+ * mock both feed VMs via the adapters). Every number has a label beside it so Outstanding /
+ * Overdue can never be confused; the status badge pairs colour with a label + icon. Tapping
+ * opens the workspace. No payment action. Money via @app/shared formatINR (integer paise).
  */
 import { Text, View } from 'react-native';
 
-import { Card, Icon, PressableScale, ProgressBar, StatusBadge } from '@/components/ui';
+import { formatINR } from '@app/shared';
+
+import { Card, Icon, PressableScale, StatusBadge } from '@/components/ui';
 import { useAppTheme } from '@/hooks/use-theme';
 
-import { dueLabel, formatINR } from '../format';
-import type { Loan } from '../placeholderData';
+import type { LoanListItemVM } from '@/features/api/vm';
 
 export interface LoanCardProps {
-  loan: Loan;
+  loan: LoanListItemVM;
   onPress: () => void;
 }
 
 export function LoanCard({ loan, onPress }: LoanCardProps) {
   const theme = useAppTheme();
-  const overdue = loan.overdueAmount > 0;
-  const percent = Math.round((loan.emisPaid / loan.totalEmis) * 100);
-  const progressText = `${loan.emisPaid} of ${loan.totalEmis} EMIs paid`;
+  const overdue = loan.isOverdue;
 
   const label = {
     color: theme.colors.textSecondary,
@@ -29,12 +29,10 @@ export function LoanCard({ loan, onPress }: LoanCardProps) {
   } as const;
 
   const a11y = [
-    `Loan account ${loan.accountNumber}, ${loan.productName}`,
+    `Loan account ${loan.accountNumber}`,
     loan.status === 'OVERDUE' ? 'overdue' : 'active',
-    `Outstanding ${formatINR(loan.outstanding)}`,
-    progressText,
-    overdue ? `Overdue ${formatINR(loan.overdueAmount)}` : null,
-    loan.nextDue ? `Next due ${formatINR(loan.nextDue.amount)}, ${dueLabel(loan.nextDue.date)}` : null,
+    `Outstanding ${formatINR(loan.outstandingPaise)}`,
+    overdue ? `Overdue ${formatINR(loan.overdueAmountPaise)}` : null,
   ]
     .filter(Boolean)
     .join('. ');
@@ -65,39 +63,25 @@ export function LoanCard({ loan, onPress }: LoanCardProps) {
             >
               {loan.accountNumber}
             </Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
-              {loan.productName}
-            </Text>
           </View>
-          <StatusBadge status={loan.status === 'OVERDUE' ? 'OVERDUE' : 'ACTIVE'} />
+          <StatusBadge status={loan.status === 'OVERDUE' ? 'OVERDUE' : loan.status === 'CLOSED' ? 'CLOSED' : 'ACTIVE'} />
         </View>
 
-        {/* Outstanding + progress */}
-        <View style={{ gap: theme.spacing.sm }}>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <Text style={label}>Outstanding</Text>
-            <Text
-              style={{
-                color: theme.colors.textPrimary,
-                fontSize: theme.typography.size.title + 2,
-                fontWeight: theme.typography.weight.bold,
-              }}
-            >
-              {formatINR(loan.outstanding)}
-            </Text>
-          </View>
-          <ProgressBar ratio={loan.emisPaid / loan.totalEmis} accessibilityLabel={progressText} />
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-              {progressText}
-            </Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-              {percent}%
-            </Text>
-          </View>
+        {/* Outstanding */}
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <Text style={label}>Outstanding</Text>
+          <Text
+            style={{
+              color: theme.colors.textPrimary,
+              fontSize: theme.typography.size.title + 2,
+              fontWeight: theme.typography.weight.bold,
+            }}
+          >
+            {formatINR(loan.outstandingPaise)}
+          </Text>
         </View>
 
-        {/* Next due / overdue + chevron */}
+        {/* Overdue + chevron */}
         <View
           style={{
             flexDirection: 'row',
@@ -105,27 +89,10 @@ export function LoanCard({ loan, onPress }: LoanCardProps) {
             gap: theme.spacing.md,
             padding: theme.spacing.md,
             borderRadius: theme.radius.lg,
-            backgroundColor: theme.colors.primarySoft,
+            backgroundColor: overdue ? theme.colors.dangerSoft : theme.colors.primarySoft,
           }}
         >
-          <View style={{ flex: 1, flexDirection: 'row', gap: theme.spacing.lg, flexWrap: 'wrap' }}>
-            {loan.nextDue ? (
-              <View style={{ gap: 2 }}>
-                <Text style={label}>Next due</Text>
-                <Text
-                  style={{
-                    color: theme.colors.primary,
-                    fontSize: theme.typography.size.subtitle,
-                    fontWeight: theme.typography.weight.bold,
-                  }}
-                >
-                  {formatINR(loan.nextDue.amount)}
-                </Text>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-                  {dueLabel(loan.nextDue.date)}
-                </Text>
-              </View>
-            ) : null}
+          <View style={{ flex: 1 }}>
             {overdue ? (
               <View style={{ gap: 2 }}>
                 <Text style={[label, { color: theme.colors.danger }]}>Overdue</Text>
@@ -136,13 +103,14 @@ export function LoanCard({ loan, onPress }: LoanCardProps) {
                     fontWeight: theme.typography.weight.bold,
                   }}
                 >
-                  {formatINR(loan.overdueAmount)}
-                </Text>
-                <Text style={{ color: theme.colors.danger, fontSize: theme.typography.size.caption }}>
-                  {loan.overdueInstallments} installments
+                  {formatINR(loan.overdueAmountPaise)}
                 </Text>
               </View>
-            ) : null}
+            ) : (
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
+                View loan details
+              </Text>
+            )}
           </View>
           <View
             style={{

@@ -10,7 +10,7 @@
  */
 import * as Clipboard from 'expo-clipboard';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
 
@@ -33,11 +33,15 @@ import { useSession } from '@/features/auth/session';
 import { PLACEHOLDER_LOANS, summarize } from '@/features/loans/placeholderData';
 import { formatDate } from '@/features/loans/format';
 import { PLACEHOLDER_GRIEVANCE_OFFICER as OFFICER, PLACEHOLDER_LENDER } from '@/features/profile/placeholderData';
+import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
 
 type Step = 'review' | 'verify' | 'done';
 
 const RESEND_SECONDS = 30;
+
+// Account screens are hidden in live mode (no profile endpoint) — retained for mock mode.
+const SHOW_ACCOUNT = showUnbackedScreens();
 
 export default function DeleteAccountScreen() {
   const theme = useAppTheme();
@@ -59,6 +63,8 @@ export default function DeleteAccountScreen() {
     const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearTimeout(id);
   }, [useOtp, secondsLeft]);
+
+  if (!SHOW_ACCOUNT) return <Redirect href="/loans" />;
 
   function keepAccount() {
     if (router.canGoBack()) router.back();

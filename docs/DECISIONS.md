@@ -24,8 +24,79 @@ item or an ambiguity must be recorded here (PRD Section 0, rule 10).
 | 2026-10-10 | A-02 migrations + migrator user + runner | Built 5 Knex migrations for `mobile_app` (devices, otp_requests, sessions, deletion_requests, audit_log) with indexes + a `sessions.device_id→devices` FK. Two decisions forced by reality: (1) **programmatic migrate runner** `src/db/migrate.ts` (latest/rollback/status/make) replaces the knex CLI + knexfile, because npm-workspaces hoists the knex binary to root `node_modules` and the local bin path breaks; knexfile.ts deleted. (2) **Separate `app_migrator` DB user** (DDL+DML on `mobile_app`) runs migrations, while the runtime `app_rw` stays DML-only — the running server never holds DDL rights (least privilege, PRD §15.1 S9). New env `APP_DB_MIGRATOR_USER`/`_PASSWORD` (falls back to `app_rw`). Also used `specificType('char(64)')` for hash columns since Knex TS types don't expose `.char()`. | PRD A-02 acceptance: migrations run **up and down** on docker MySQL. Verified against the live DB: all 5 tables, 7 named indexes, the unique `refresh_hash`, and the FK all present; rollback drops FK-safely in reverse and re-applies; `tsc --noEmit` + tests green. Seed (`00-init.sql`) and `DB_ACCESS.md` updated to the 3-user model. |
 | 2026-10-10 | Backend spec authored | Wrote `docs/BACKEND_SPEC.md` — the backend build reference: delivery model, layering/ACL, `mobile_app` DB structure, repository seam, full endpoint checklist mapped to PRD §20 tasks, security, env, testing, and client questions that gate the live phase. OpenAPI approach left as a default (zod-first via `@asteasolutions/zod-to-openapi`) to confirm at F-03. | Consolidates PRD + the Express/MySQL/delivery-model decisions into one actionable spec so the remaining API tasks (A-02, A-04, A-05/06, A-08, A-09, F-03) can proceed without re-deriving context. |
 | 2026-10-07 | API skeleton + run model (A-01) | Scaffolded `apps/api` from scratch (removed all `.gitkeep` placeholders). Structure per PRD §7.2: `config/env.ts` (zod, fail-fast + boot guards), `lib/` (errors, logger, ids, requestContext, errorHandler, rateLimit), `db/` (read-only mysql2 `clientDb` + `SHOW GRANTS` guard, knex `appDb`, `knexfile`), `adapters/sms` (SmsProvider: Console/Msg91), `schedule/ScheduleProvider` (Computed via `@app/shared`), `repositories/LoanRepository` (interface + records), `modules/` (health, config). Runs via **tsx** in dev and prod (no compiled `dist`) because `@app/shared` ships raw TS — avoids a bundler dependency and the dual-package hazard. Live endpoints: `/v1/health`, `/v1/health/ready`, `/v1/config`. | PRD A-01 acceptance (boot guards, health, env validation). Verified: `tsc --noEmit` clean, 6 supertest smoke tests pass, env fail-fast confirmed, server boot reaches the DB read-only guard. Auth/me/loans endpoints are the next tasks (A-04/A-08/A-09). |
+| 2026-11-05 | **Borrower API live integration (mobile)** | Mobile app wired to the real Borrower API (`docs/api-guide.md`, base `https://online.alangcredits.com`, base path `/api/v1`) behind `EXPO_PUBLIC_API_MODE=mock\|live`. Contract-first rewrite of `contracts/openapi.yaml` to the guide's wire shapes; a thin client **adapter boundary** (`apps/mobile/src/features/api/`) bridges wire (rupee decimals, ISO datetimes, opaque `loanRef`) → `@app/shared` domain (integer paise, IST dates, uppercase `LoanStatus`). See the dedicated sections below for each locked decision and open point. | Full requirements/design in `.agents/pipeline/2026-11-05_15-32-10/`. |
 
 <!-- Add new rows above. Keep newest at the bottom of each topic. -->
+
+---
+
+## Borrower API live integration — locked decisions (2026-11-05)
+
+- **D-GUIDE-WINS.** Where `docs/api-guide.md` conflicts with `shared/src/types/api.ts`, the **guide
+  wins** for the WIRE contract. The internal `@app/shared` domain types are left unchanged; the
+  adapter bridges wire → domain. `contracts/openapi.yaml` describes the wire shapes only.
+- **Base path `/api/v1`, origin-only base URL.** `EXPO_PUBLIC_API_BASE_URL` is validated as
+  **origin-only https** and throws at startup in live mode if it carries a path (the old
+  `.../v1` default would). Every request path carries the full `/api/v1` prefix; never `/v1`.
+- **Adapter conversion boundary.** Money crosses wire→domain exactly once via `rupeesToPaise`/
+  `assertPaise`; dates via the new `isoDateTimeToIstDate`. No `parseFloat`/`toFixed` on money
+  anywhere (live OR mock). `loanRef`→`loanId` verbatim/opaque (never parsed, never persisted
+  across logins). Status normalized via an explicit case-insensitive map + overdue override;
+  payment frequency via an explicit map (unknown → `null`/dash).
+- **D-SHARED (resolution mechanism + §0 smoke outcome).** `@app/shared` is now a **real workspace
+  dependency** of `apps/mobile` (`"@app/shared": "*"`). npm **hoists** the symlink to the repo-root
+  `node_modules/@app/shared` (not `apps/mobile/node_modules`); Metro resolves it via its
+  `nodeModulesPaths`. The §0 gating Metro smoke (`expo export --platform android` with a throwaway
+  `formatINR` import) initially **FAILED** with `Unable to resolve module ./money.js` — the barrel's
+  NodeNext `.js` specifiers do not map to `.ts` under Metro by default. Applied the design's §0
+  fallback: a scoped `resolver.resolveRequest` in `metro.config.js` that rewrites a relative `.js`
+  import to its sibling `.ts` **only** for files under `shared/src`. Re-ran the smoke: **GREEN**
+  (`entry-*.hbc` emitted, no resolve error). No compiled `dist` build was needed. The throwaway
+  import was removed after the smoke passed.
+- **Token storage (Option A).** Refresh token in `expo-secure-store` key `refresh_token`,
+  `keychainAccessible: WHEN_UNLOCKED_THIS_DEVICE_ONLY`, **no** `requireAuthentication` (not
+  biometric-gated). Access token in memory only. `expiresInSeconds` dropped/unused — the **sole**
+  refresh trigger is a 401 carrying `Token-Expired: true`; single-flight refresh saves the NEW
+  refresh token FIRST, retries the original request exactly once, clears both tokens + the query
+  cache + surfaces `session_expired` on failure. `deviceId` is a per-install random id
+  (`expo-crypto`, 32 chars) in SecureStore, never a hardware id, never cleared on logout.
+- **Hidden in live mode (code retained + working in mock mode).** Screens: loan schedule, loan
+  payment history, profile/account (+ its subscreens). Loan-detail cards: EMIs-paid progress bar,
+  next-due card, financial-ledger card, settlement/payment-breakup card, key-facts card, plus the
+  `scheme`/`branch`/`firstEmiDate`/`lastPayment` rows and the `productName` line. All gated behind
+  `showUnbackedScreens()`/`showUnbackedCards()` (= `apiMode()==='mock'`) and fully functional in
+  mock mode.
+- **@bam.tech pinning (two pins).** `@bam.tech/react-native-app-security` configured with TWO
+  clearly-marked PLACEHOLDER SPKI pins for `online.alangcredits.com` (leaf + intermediate) +
+  `preventRecentScreenshots`. Never a single pin. See **D-PINS**.
+- **D-NETSEC.** A custom Expo config plugin (`apps/mobile/plugins/with-network-security-config.js`)
+  writes `res/xml/network_security_config.xml` (cleartext off, **system-only** trust anchors),
+  sets `android:networkSecurityConfig`, and sets `android:allowBackup="false"` — because
+  `expo-build-properties` cannot emit the XML. `expo-build-properties` still provides
+  `usesCleartextTraffic:false` + release Proguard/shrink. All native hardening requires a
+  **development build** (not Expo Go) + `npx expo prebuild`.
+- **Play Integrity (client-only WARN).** `@expo/app-integrity` is behind
+  `EXPO_PUBLIC_INTEGRITY_ENABLED` (default **off**); it only acquires a token (never sent anywhere —
+  no backend verify endpoint) and WARNs locally. See **D-INTEGRITY**.
+
+## Borrower API live integration — open points (flag, do not invent)
+
+- **D-PINS.** Real SPKI pins depend on reaching `online.alangcredits.com` from the build
+  environment, which is not available here. Two clearly-marked PLACEHOLDER pins ship; the exact
+  `openssl` derivation command is documented in `docs/SETUP.md` + `README.md`. Replace both before
+  a production build. Never ship a single pin with no backup.
+- **D-INTEGRITY.** The api-guide defines **no endpoint** to receive/verify a Play Integrity token,
+  so integrity is client-token acquisition + local root/tamper WARN only; backend verification is
+  deferred. `cloudProjectNumber` (`EXPO_PUBLIC_INTEGRITY_CLOUD_PROJECT_NUMBER`) is unknown — needed
+  from the lender. The flag is off by default and a missing `cloudProjectNumber` early-returns so
+  its absence never breaks the app.
+- **D-STATUS.** The guide does not enumerate `status`/`paymentFrequency` vocabulary. The adapter
+  maps the known values (`active/overdue/closed`, `daily/weekly/fortnightly/monthly`)
+  case-insensitively and falls back safely (`ACTIVE` / `null` + overdue derived from
+  `overdueAmount>0`). Confirm the full vocabulary with the lender.
+- **D-RICH-DETAIL.** Whether `online.alangcredits.com` returns richer loan detail than the guide
+  documents (productName/scheme/branch/EMI counts/ledger) is unknown. Default: those cards are
+  stripped in live mode; re-enable them if the server provides the fields.
 
 ---
 

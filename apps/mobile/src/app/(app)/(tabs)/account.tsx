@@ -3,7 +3,7 @@
  * Not a social profile: no photo upload, no edit, no stats.
  */
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -26,7 +26,11 @@ import { PLACEHOLDER_CUSTOMER } from '@/features/loans/placeholderData';
 import { PLACEHOLDER_LENDER } from '@/features/profile/placeholderData';
 import { LanguageSheet } from '@/features/settings/components/LanguageSheet';
 import { LANGUAGE_LABEL, usePreferences } from '@/features/settings/preferences';
+import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
+
+// Hidden in live mode (no profile endpoint) — code retained for mock mode.
+const SHOW_PROFILE = showUnbackedScreens();
 
 export default function ProfileScreen() {
   const theme = useAppTheme();
@@ -35,6 +39,8 @@ export default function ProfileScreen() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const version = Constants.expoConfig?.version ?? '1.0.0';
+
+  if (!SHOW_PROFILE) return <Redirect href="/loans" />;
 
   return (
     <ScreenContainer tone="canvas" bottomInset={false}>

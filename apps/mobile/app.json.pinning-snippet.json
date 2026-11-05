@@ -1,0 +1,29 @@
+// NOT a config file — a saved snippet so SSL pinning + network-security can be re-enabled easily.
+//
+// These two plugin entries were temporarily REMOVED from app.json "plugins" for the Phase-A live
+// API test (pinning OFF), because the pins below are PLACEHOLDERS and would otherwise reject the
+// real server. See docs/LIVE_API_TESTING.md.
+//
+// TO RE-ENABLE (Phase B): paste both entries back into the "plugins" array in app.json (right
+// after the "expo-build-properties" entry), replace the two PLACEHOLDER_... strings with the real
+// leaf + intermediate SPKI pins derived via the openssl step in docs/SETUP.md, then:
+//   npx expo prebuild --clean   (local)   — or rebuild via EAS.
+//
+// --- paste from here ---
+      [
+        "@bam.tech/react-native-app-security",
+        {
+          "sslPinning": {
+            "online.alangcredits.com": [
+              "PLACEHOLDER_LEAF_SPKI_SHA256_BASE64=",
+              "PLACEHOLDER_INTERMEDIATE_SPKI_SHA256_BASE64="
+            ]
+          },
+          "preventRecentScreenshots": {
+            "ios": { "enabled": true },
+            "android": { "enabled": true }
+          }
+        }
+      ],
+      "./plugins/with-network-security-config.js"
+// --- to here ---

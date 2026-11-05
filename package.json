@@ -12,6 +12,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "start": "npm run start --workspace @app/mobile",
+    "mobile": "npm run start --workspace @app/mobile",
     "lint": "echo \"TODO: run eslint across workspaces\" && exit 0",
     "typecheck": "npm run typecheck --workspace @app/shared && npm run typecheck --workspace @app/api",
     "test": "npm run test --workspace @app/shared && npm run test --workspace @app/api"

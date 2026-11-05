@@ -7,6 +7,7 @@ import {
   daysInMonth,
   formatDate,
   isLeapYear,
+  isoDateTimeToIstDate,
   parseIsoDate,
   todayIST,
   weekday,
@@ -88,5 +89,48 @@ describe('formatDate', () => {
   it("formats as 'd MMM yyyy'", () => {
     expect(formatDate('2026-06-15')).toBe('15 Jun 2026');
     expect(formatDate('2026-09-19')).toBe('19 Sep 2026');
+  });
+});
+
+describe('isoDateTimeToIstDate', () => {
+  it('returns a date-only value verbatim', () => {
+    expect(isoDateTimeToIstDate('2026-04-01')).toBe('2026-04-01');
+  });
+
+  it('takes the date part of a zoneless midnight datetime', () => {
+    expect(isoDateTimeToIstDate('2026-04-01T00:00:00')).toBe('2026-04-01');
+  });
+
+  it('takes the date part of a zoneless non-midnight datetime (time ignored)', () => {
+    expect(isoDateTimeToIstDate('2026-04-01T23:59:00')).toBe('2026-04-01');
+  });
+
+  it('accepts a zoneless datetime without seconds', () => {
+    expect(isoDateTimeToIstDate('2026-04-01T08:30')).toBe('2026-04-01');
+  });
+
+  it('shifts a Z value across the IST day boundary', () => {
+    // 2026-04-01T20:00:00Z is 2026-04-02 01:30 IST -> the 2nd.
+    expect(isoDateTimeToIstDate('2026-04-01T20:00:00Z')).toBe('2026-04-02');
+  });
+
+  it('keeps a Z value that stays on the same IST day', () => {
+    // 2026-04-01T10:00:00Z is 2026-04-01 15:30 IST -> the 1st.
+    expect(isoDateTimeToIstDate('2026-04-01T10:00:00Z')).toBe('2026-04-01');
+  });
+
+  it('handles an explicit +05:30 offset (already IST)', () => {
+    expect(isoDateTimeToIstDate('2026-04-01T18:30:00+05:30')).toBe('2026-04-01');
+  });
+
+  it('handles a negative offset that crosses into the next IST day', () => {
+    // 2026-04-01T20:00:00-05:00 is 2026-04-02T01:00:00Z -> 2026-04-02 06:30 IST.
+    expect(isoDateTimeToIstDate('2026-04-01T20:00:00-05:00')).toBe('2026-04-02');
+  });
+
+  it('throws on a malformed value', () => {
+    expect(() => isoDateTimeToIstDate('2026-13-01T00:00:00')).toThrow();
+    expect(() => isoDateTimeToIstDate('not-a-date')).toThrow();
+    expect(() => isoDateTimeToIstDate('2026-04-01T25:00:00')).toThrow();
   });
 });

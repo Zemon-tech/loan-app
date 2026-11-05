@@ -14,6 +14,9 @@ import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { BrandMark, Button, Card, Icon, Pill, ScreenContainer } from '@/components/ui';
+import { apiMode } from '@/features/api/config';
+import * as endpoints from '@/features/api/endpoints';
+import { friendlyMessage } from '@/features/api/errors';
 import { Links } from '@/constants/links';
 import { formatMobileInput, INDIAN_MOBILE, sanitizeMobile } from '@/features/auth/format';
 import { useSession } from '@/features/auth/session';
@@ -24,14 +27,38 @@ export default function LoginScreen() {
   const { startLogin } = useSession();
   const [digits, setDigits] = useState('');
   const [focused, setFocused] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const isValid = INDIAN_MOBILE.test(digits);
-  const showError = digits.length === 10 && !isValid;
+  const showError = (digits.length === 10 && !isValid) || serverError !== null;
+  const errorText = serverError ?? 'Enter a valid 10-digit mobile number.';
 
-  function onContinue() {
-    if (!isValid) return;
+  async function onContinue() {
+    if (!isValid || submitting) return;
     startLogin(`+91${digits}`);
-    router.push('/otp');
+    setServerError(null);
+
+    // Mock mode keeps the instant, backend-free flow.
+    if (apiMode() === 'mock') {
+      router.push('/otp');
+      return;
+    }
+
+    setSubmitting(true);
+    const res = await endpoints.otpRequest(digits);
+    setSubmitting(false);
+
+    if (res.ok) {
+      // 202 — neutral copy on the OTP screen; never reveal registration status.
+      router.push('/otp');
+      return;
+    }
+    if (res.error.kind === 'BAD_REQUEST') {
+      setServerError('Enter a valid 10-digit mobile number.');
+      return;
+    }
+    setServerError(friendlyMessage(res.error));
   }
 
   const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption };
@@ -124,7 +151,10 @@ export default function LoginScreen() {
             />
             <TextInput
               value={formatMobileInput(digits)}
-              onChangeText={(t) => setDigits(sanitizeMobile(t))}
+              onChangeText={(t) => {
+                setDigits(sanitizeMobile(t));
+                if (serverError) setServerError(null);
+              }}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               onSubmitEditing={onContinue}
@@ -147,7 +177,7 @@ export default function LoginScreen() {
 
           {showError ? (
             <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.danger, fontSize: theme.typography.size.caption }}>
-              Enter a valid 10-digit mobile number.
+              {errorText}
             </Text>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
@@ -159,7 +189,7 @@ export default function LoginScreen() {
           )}
         </View>
 
-        <Button label="Continue" rightIcon="arrow-forward" onPress={onContinue} disabled={!isValid} />
+        <Button label="Continue" rightIcon="arrow-forward" onPress={onContinue} disabled={!isValid || submitting} loading={submitting} />
 
         <View
           style={{

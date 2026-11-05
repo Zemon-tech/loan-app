@@ -1,30 +1,47 @@
 /**
- * S6: Loan Overview — PRD 8.6. Answers: how much do I owe, why, what is due, what have I paid.
+ * S6: Loan Overview — PRD 8.6. Answers: how much do I owe, why, what have I paid.
  * NO payment button, link, UPI or QR anywhere (tracker only).
  *
- * TODO (M-06):
- *  - GET /v1/loans/{loanId}; loading/error states; pull-to-refresh; "Figures as of {asOf}"
- *  - keyFacts.kfsDocumentUrl from the API; format money via @app/shared formatINR; i18n
+ * Renders a LoanDetailVM (via the dataSource seam) in both modes. In LIVE mode only wire-backed
+ * content shows: the hero (account, status, outstanding, overdue) and the "Loan details" card
+ * (EMI amount, start/maturity/frequency/financed/total-paid). The unbacked cards (EMIs-paid
+ * progress bar, next-due card, financial-ledger card, settlement/payment-breakup card, key-facts
+ * card, and scheme/branch/firstEmiDate/lastPayment rows) are hidden — their code is retained and
+ * renders in MOCK mode behind showUnbackedCards(), reading the placeholder Loan directly.
  */
 import * as WebBrowser from 'expo-web-browser';
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { formatDate as formatIsoDate, formatINR as formatPaise, type PayFrequency } from '@app/shared';
+
 import { Card, Icon, IconTile, ProgressBar, StateScroll, StateView, StatusBadge, type IconName } from '@/components/ui';
+import { showUnbackedCards } from '@/features/api/features';
+import { useLoanData } from '@/features/api/dataSource';
+import { useSecureScreen } from '@/features/security/useSecureScreen';
 import { Links } from '@/constants/links';
-import { dueLabel, formatDate, formatINR } from '@/features/loans/format';
+import { formatDate, formatINR } from '@/features/loans/format';
 import { findPlaceholderLoan, type Loan } from '@/features/loans/placeholderData';
+import type { LoanDetailVM } from '@/features/api/vm';
 import { OverviewSkeleton } from '@/features/system/components/Skeletons';
 import { LoadErrorState } from '@/features/system/components/SystemStates';
-import { useMockQuery } from '@/features/system/mockQuery';
 import { useAppTheme } from '@/hooks/use-theme';
 
+const SHOW_MOCK_CARDS = showUnbackedCards();
+
+const FREQUENCY_LABEL: Record<PayFrequency, { label: string; unit: string }> = {
+  DAILY: { label: 'Daily', unit: 'day' },
+  WEEKLY: { label: 'Weekly', unit: 'week' },
+  FORTNIGHTLY: { label: 'Fortnightly', unit: 'fortnight' },
+  MONTHLY: { label: 'Monthly', unit: 'month' },
+};
+
 export default function LoanOverviewScreen() {
+  useSecureScreen();
   const { loanId } = useLocalSearchParams<{ loanId: string }>();
-  const load = useCallback(() => findPlaceholderLoan(loanId ?? ''), [loanId]);
-  const query = useMockQuery(`loan:${loanId}`, load);
+  const query = useLoanData(loanId ?? '');
 
   if (query.status === 'session_expired') return <Redirect href="/session-expired" />;
   if (query.status === 'loading') return <OverviewSkeleton />;
@@ -46,13 +63,16 @@ export default function LoanOverviewScreen() {
       </StateScroll>
     );
   }
-  return <OverviewContent loan={query.data} />;
+  return <OverviewContent vm={query.data} loanId={loanId ?? ''} />;
 }
 
-function OverviewContent({ loan }: { loan: Loan }) {
+function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const [detailsOpen, setDetailsOpen] = useState(true);
+
+  // Mock-only rich cards still read the placeholder Loan directly (retained for review).
+  const mockLoan = SHOW_MOCK_CARDS ? findPlaceholderLoan(loanId) : undefined;
 
   const caps = {
     color: theme.colors.textSecondary,
@@ -62,10 +82,20 @@ function OverviewContent({ loan }: { loan: Loan }) {
     textTransform: 'uppercase',
   } as const;
   const cardStyle = { borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md } as const;
-  const remaining = loan.totalEmis - loan.emisPaid;
-  const percent = Math.round((loan.emisPaid / loan.totalEmis) * 100);
-  const frequencyUnit = loan.frequency === 'Daily' ? 'day' : 'month';
-  const badge = loan.status === 'OVERDUE' ? 'OVERDUE' : loan.status === 'CLOSED' ? 'CLOSED' : 'ACTIVE';
+
+  const badge = vm.status === 'OVERDUE' ? 'OVERDUE' : vm.status === 'CLOSED' ? 'CLOSED' : 'ACTIVE';
+  const freq = vm.payFrequency ? FREQUENCY_LABEL[vm.payFrequency] : null;
+  const emiRow = freq ? `${formatPaise(vm.emiAmountPaise)} / ${freq.unit}` : formatPaise(vm.emiAmountPaise);
+
+  const detailRows: [string, string][] = [
+    ['Loan account number', vm.accountNumber],
+    ['EMI amount', emiRow],
+    ['Frequency', freq ? freq.label : '\u2014'],
+    ['Loan start date', vm.loanDate ? formatIsoDate(vm.loanDate) : '\u2014'],
+    ['Maturity date', vm.maturityDate ? formatIsoDate(vm.maturityDate) : '\u2014'],
+    ['Financed amount', formatPaise(vm.principalPaise)],
+    ['Total paid', formatPaise(vm.totalPaidPaise)],
+  ];
 
   return (
     <ScrollView
@@ -75,18 +105,20 @@ function OverviewContent({ loan }: { loan: Loan }) {
         gap: theme.spacing.lg,
       }}
     >
-      {/* Hero: account, outstanding, progress */}
+      {/* Hero: account, status, outstanding (restructured — no productName / progress in live) */}
       <Card tone="card" style={cardStyle}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
           <IconTile name="briefcase-outline" size={40} background="primarySoft" />
           <View style={{ flex: 1 }}>
-            <Text style={caps}>Account {loan.accountNumber}</Text>
-            <Text
-              numberOfLines={1}
-              style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.semibold }}
-            >
-              {loan.productName}
-            </Text>
+            <Text style={caps}>Account {vm.accountNumber}</Text>
+            {SHOW_MOCK_CARDS && mockLoan ? (
+              <Text
+                numberOfLines={1}
+                style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.semibold }}
+              >
+                {mockLoan.productName}
+              </Text>
+            ) : null}
           </View>
           <StatusBadge status={badge} />
         </View>
@@ -95,41 +127,29 @@ function OverviewContent({ loan }: { loan: Loan }) {
           <Text style={caps}>Current outstanding balance</Text>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: theme.spacing.sm }}>
             <Text
-              accessibilityLabel={`Current outstanding balance ${formatINR(loan.outstanding)}`}
+              accessibilityLabel={`Current outstanding balance ${formatPaise(vm.outstandingPaise)}`}
               style={{
                 color: theme.colors.textPrimary,
                 fontSize: theme.typography.size.heading + 6,
                 fontWeight: theme.typography.weight.bold,
               }}
             >
-              {formatINR(loan.outstanding)}
+              {formatPaise(vm.outstandingPaise)}
             </Text>
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>INR</Text>
           </View>
         </View>
 
-        <View style={{ gap: theme.spacing.xs }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
-              <Icon name="pie-chart-outline" size={16} color="primary" />
-              <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.medium }}>
-                {loan.emisPaid} of {loan.totalEmis} EMIs paid
-              </Text>
-            </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-              {percent}% completed {'\u2022'} {remaining} left
-            </Text>
-          </View>
-          <ProgressBar ratio={loan.emisPaid / loan.totalEmis} accessibilityLabel={`${loan.emisPaid} of ${loan.totalEmis} EMIs paid`} />
-        </View>
+        {/* Mock-only: EMIs-paid progress bar (no wire source -> hidden in live mode) */}
+        {SHOW_MOCK_CARDS && mockLoan ? <MockProgress loan={mockLoan} /> : null}
       </Card>
 
       {/* Overdue warning (informational only) */}
-      {loan.overdueAmount > 0 ? (
+      {vm.overdueAmountPaise > 0 ? (
         <View
           accessible
           accessibilityRole="alert"
-          accessibilityLabel={`${formatINR(loan.overdueAmount)} overdue across ${loan.overdueInstallments} delayed installments`}
+          accessibilityLabel={`${formatPaise(vm.overdueAmountPaise)} overdue`}
           style={{
             flexDirection: 'row',
             gap: theme.spacing.md,
@@ -152,10 +172,7 @@ function OverviewContent({ loan }: { loan: Loan }) {
           </View>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={{ color: theme.colors.danger, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
-              {formatINR(loan.overdueAmount)} overdue
-            </Text>
-            <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.caption, lineHeight: 18 }}>
-              Across {loan.overdueInstallments} delayed installments.
+              {formatPaise(vm.overdueAmountPaise)} overdue
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
               <Icon name="information-circle-outline" size={14} color="textSecondary" />
@@ -167,44 +184,10 @@ function OverviewContent({ loan }: { loan: Loan }) {
         </View>
       ) : null}
 
-      {/* Next installment due */}
-      {loan.nextDue ? (
-        <Card tone="card" style={{ ...cardStyle, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-          <IconTile name="calendar-outline" size={40} background="primarySoft" />
-          <View style={{ flex: 1 }}>
-            <Text style={caps}>Next installment due</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
-              <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
-                {formatINR(loan.nextDue.amount)}
-              </Text>
-              <Text style={{ color: theme.colors.primary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold }}>
-                {dueLabel(loan.nextDue.date)} ({formatDate(loan.nextDue.date)})
-              </Text>
-            </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-              EMI #{loan.nextDue.emiNumber}
-            </Text>
-          </View>
-        </Card>
-      ) : loan.status === 'CLOSED' ? (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: theme.spacing.md,
-            padding: theme.spacing.lg,
-            borderRadius: theme.radius.lg,
-            backgroundColor: theme.colors.successSoft,
-          }}
-        >
-          <Icon name="checkmark-circle" size={24} color="success" />
-          <Text style={{ flex: 1, color: theme.colors.textPrimary, fontSize: theme.typography.size.body }}>
-            This loan is fully paid. Nothing is due.
-          </Text>
-        </View>
-      ) : null}
+      {/* Mock-only: next installment due card (no wire source -> hidden in live mode) */}
+      {SHOW_MOCK_CARDS && mockLoan ? <MockNextDue loan={mockLoan} /> : null}
 
-      {/* Loan details (collapsible) */}
+      {/* Loan details (collapsible) — wire-backed rows, kept in both modes */}
       <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: 0, gap: 0, overflow: 'hidden' }}>
         <Pressable
           accessibilityRole="button"
@@ -230,27 +213,131 @@ function OverviewContent({ loan }: { loan: Loan }) {
         </Pressable>
         {detailsOpen ? (
           <View style={{ paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.lg }}>
-            {[
-              ['Loan account number', loan.accountNumber],
-              ['Scheme', loan.scheme],
-              ['Loan sanction date', formatDate(loan.loanDate)],
-              ['First EMI date', formatDate(loan.firstEmiDate)],
-              ['EMI amount', `${formatINR(loan.emiAmount)} / ${frequencyUnit}`],
-              ['Frequency', loan.frequency],
-              ['Total EMIs', `${loan.totalEmis} installments`],
-              ['Maturity date', formatDate(loan.maturityDate)],
-              ['Originating branch', loan.branch],
-              [
-                'Last recorded payment',
-                loan.lastPayment ? `${formatDate(loan.lastPayment.date)} (${formatINR(loan.lastPayment.amount)})` : '\u2014',
-              ],
-            ].map(([label, value], i) => (
-              <DetailRow key={label} label={label!} value={value!} shaded={i % 2 === 1} highlight={label === 'Last recorded payment' && !!loan.lastPayment} />
+            {detailRows.map(([label, value], i) => (
+              <DetailRow key={label} label={label} value={value} shaded={i % 2 === 1} />
             ))}
+            {/* Mock-only rows: scheme / branch / first EMI / last payment */}
+            {SHOW_MOCK_CARDS && mockLoan ? (
+              <>
+                <DetailRow label="Scheme" value={mockLoan.scheme} shaded={detailRows.length % 2 === 1} />
+                <DetailRow label="Originating branch" value={mockLoan.branch} shaded={detailRows.length % 2 === 0} />
+                <DetailRow label="First EMI date" value={formatDate(mockLoan.firstEmiDate)} shaded={detailRows.length % 2 === 1} />
+                <DetailRow
+                  label="Last recorded payment"
+                  value={mockLoan.lastPayment ? `${formatDate(mockLoan.lastPayment.date)} (${formatINR(mockLoan.lastPayment.amount)})` : '\u2014'}
+                  shaded={detailRows.length % 2 === 0}
+                  highlight={!!mockLoan.lastPayment}
+                />
+              </>
+            ) : null}
           </View>
         ) : null}
       </Card>
 
+      {/* Mock-only rich cards (no wire source -> hidden in live mode) */}
+      {SHOW_MOCK_CARDS && mockLoan ? <MockRichCards loan={mockLoan} /> : null}
+
+      {/* Footer disclaimer (always visible) */}
+      <View style={{ alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing.md }}>
+        <IconTile name="shield-checkmark-outline" size={32} background="surface" color="textSecondary" />
+        <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, lineHeight: 20 }}>
+          This app shows your loan information only. Payments are not made in this app. For queries
+          or repayments, please contact your lending branch directly.
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+/* ----------------------- Mock-only sub-views (retained) ----------------------- */
+
+function MockProgress({ loan }: { loan: Loan }) {
+  const theme = useAppTheme();
+  const remaining = loan.totalEmis - loan.emisPaid;
+  const percent = Math.round((loan.emisPaid / loan.totalEmis) * 100);
+  return (
+    <View style={{ gap: theme.spacing.xs }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+          <Icon name="pie-chart-outline" size={16} color="primary" />
+          <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.medium }}>
+            {loan.emisPaid} of {loan.totalEmis} EMIs paid
+          </Text>
+        </View>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
+          {percent}% completed {'\u2022'} {remaining} left
+        </Text>
+      </View>
+      <ProgressBar ratio={loan.emisPaid / loan.totalEmis} accessibilityLabel={`${loan.emisPaid} of ${loan.totalEmis} EMIs paid`} />
+    </View>
+  );
+}
+
+function MockNextDue({ loan }: { loan: Loan }) {
+  const theme = useAppTheme();
+  const cardStyle = { borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md } as const;
+  const caps = {
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.size.caption - 1,
+    fontWeight: theme.typography.weight.semibold,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  } as const;
+  if (loan.nextDue) {
+    return (
+      <Card tone="card" style={{ ...cardStyle, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+        <IconTile name="calendar-outline" size={40} background="primarySoft" />
+        <View style={{ flex: 1 }}>
+          <Text style={caps}>Next installment due</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
+            <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
+              {formatINR(loan.nextDue.amount)}
+            </Text>
+            <Text style={{ color: theme.colors.primary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold }}>
+              {formatDate(loan.nextDue.date)}
+            </Text>
+          </View>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
+            EMI #{loan.nextDue.emiNumber}
+          </Text>
+        </View>
+      </Card>
+    );
+  }
+  if (loan.status === 'CLOSED') {
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: theme.spacing.md,
+          padding: theme.spacing.lg,
+          borderRadius: theme.radius.lg,
+          backgroundColor: theme.colors.successSoft,
+        }}
+      >
+        <Icon name="checkmark-circle" size={24} color="success" />
+        <Text style={{ flex: 1, color: theme.colors.textPrimary, fontSize: theme.typography.size.body }}>
+          This loan is fully paid. Nothing is due.
+        </Text>
+      </View>
+    );
+  }
+  return null;
+}
+
+function MockRichCards({ loan }: { loan: Loan }) {
+  const theme = useAppTheme();
+  const cardStyle = { borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md } as const;
+  const caps = {
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.size.caption - 1,
+    fontWeight: theme.typography.weight.semibold,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  } as const;
+  return (
+    <>
       {/* Financial ledger breakdown */}
       <Card tone="card" style={cardStyle}>
         <SectionHeading icon="wallet-outline" title="Financial ledger breakdown" />
@@ -345,16 +432,7 @@ function OverviewContent({ loan }: { loan: Loan }) {
           </Pressable>
         </Card>
       ) : null}
-
-      {/* Footer disclaimer (always visible) */}
-      <View style={{ alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing.md }}>
-        <IconTile name="shield-checkmark-outline" size={32} background="surface" color="textSecondary" />
-        <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, lineHeight: 20 }}>
-          This app shows your loan information only. Payments are not made in this app. For queries
-          or repayments, please contact your lending branch directly.
-        </Text>
-      </View>
-    </ScrollView>
+    </>
   );
 }
 

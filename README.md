@@ -47,6 +47,24 @@ npx expo install expo-dev-client
 eas build --platform android --profile development   # cloud build (works on Windows)
 ```
 
+## Borrower API live integration (mobile)
+
+The mobile app can run against the real Borrower API (`docs/api-guide.md`, base
+`https://online.alangcredits.com`, base path `/api/v1`) behind `EXPO_PUBLIC_API_MODE=mock|live`.
+Mock mode keeps the full prototype working with no backend. A client **adapter boundary**
+(`apps/mobile/src/features/api/`) converts the guide's rupee decimals + ISO datetimes into the
+app's `@app/shared` integer-paise / IST-date domain; auth is OTP + an optional date-of-birth step
+with SecureStore-backed single-flight token refresh.
+
+Native hardening (certificate pinning with a backup pin, FLAG_SECURE, cleartext blocking +
+network-security-config, `allowBackup=false`, Play Integrity client WARN) is configured via
+`app.json` plugins and **requires a development build + `npx expo prebuild` (not Expo Go)**. The
+shipped certificate pins are **placeholders** — derive the real leaf + intermediate SPKI hashes
+with the documented `openssl` sequence before a production build (see `docs/SETUP.md` §6). Full
+install set, env vars, dev-build steps, and the verification commands are in `docs/SETUP.md` §6;
+locked decisions + open points (D-PINS, D-INTEGRITY, D-STATUS, D-RICH-DETAIL, D-SHARED, D-NETSEC)
+are in `docs/DECISIONS.md`.
+
 ## Phases
 
 - **Phase 0** — Foundation: monorepo, shared schedule calculator (golden tests), mock-data mobile app.

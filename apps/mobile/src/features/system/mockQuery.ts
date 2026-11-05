@@ -13,6 +13,10 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 
+import type { QueryState } from '@/features/api/vm';
+
+export type { QueryState };
+
 export type MockNetwork = 'ok' | 'loading' | 'error' | 'offline' | 'session_expired';
 
 export function mockNetwork(): MockNetwork {
@@ -24,12 +28,6 @@ function delayMs(): number {
   const n = Number(process.env.EXPO_PUBLIC_MOCK_DELAY_MS);
   return Number.isFinite(n) && process.env.EXPO_PUBLIC_MOCK_DELAY_MS ? n : 900;
 }
-
-export type QueryState<T> =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'session_expired' }
-  | { status: 'success'; data: T };
 
 /** Simple in-memory cache so revisiting a screen is instant (like a query cache). */
 const cache = new Map<string, unknown>();

@@ -5,13 +5,18 @@
  *
  * TODO (M-09): contacts, hours and officer from GET /v1/config.support; FAQ text from the client; i18n
  */
+import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
 import { Card, Icon, IconTile, ScreenContainer, ScreenHeader, type IconName } from '@/components/ui';
 import { Links } from '@/constants/links';
 import { PLACEHOLDER_GRIEVANCE_OFFICER as OFFICER, PLACEHOLDER_SUPPORT as SUPPORT } from '@/features/profile/placeholderData';
+import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
+
+// Account screens are hidden in live mode (no profile endpoint) — retained for mock mode.
+const SHOW_ACCOUNT = showUnbackedScreens();
 
 const FAQ: { q: string; a: string }[] = [
   {
@@ -38,6 +43,8 @@ export default function HelpScreen() {
 
   const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption } as const;
   const heading = { color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.bold } as const;
+
+  if (!SHOW_ACCOUNT) return <Redirect href="/loans" />;
 
   return (
     <ScreenContainer tone="canvas">

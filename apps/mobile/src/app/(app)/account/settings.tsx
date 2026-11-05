@@ -9,7 +9,7 @@
  */
 import Constants from 'expo-constants';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
@@ -30,7 +30,11 @@ import { LogoutSheet } from '@/features/auth/components/LogoutSheet';
 import { useSession } from '@/features/auth/session';
 import { LanguageSheet } from '@/features/settings/components/LanguageSheet';
 import { AUTO_LOCK_OPTIONS, LANGUAGE_LABEL, usePreferences } from '@/features/settings/preferences';
+import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
+
+// Account screens are hidden in live mode (no profile endpoint) — retained for mock mode.
+const SHOW_ACCOUNT = showUnbackedScreens();
 
 export default function SettingsScreen() {
   const theme = useAppTheme();
@@ -79,6 +83,8 @@ export default function SettingsScreen() {
       setLockOpen(false);
     }
   }
+
+  if (!SHOW_ACCOUNT) return <Redirect href="/loans" />;
 
   return (
     <ScreenContainer tone="canvas">

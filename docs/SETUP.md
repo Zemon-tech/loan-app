@@ -163,6 +163,62 @@ npm test
 
 ---
 
+## 6. Borrower API live integration (mobile)
+
+The mobile app talks to the real Borrower API behind the `EXPO_PUBLIC_API_MODE` toggle.
+
+```bash
+# apps/mobile/.env  (copy from .env.example)
+EXPO_PUBLIC_API_MODE=live                         # or `mock` (default) for the prototype
+EXPO_PUBLIC_API_BASE_URL=https://online.alangcredits.com   # ORIGIN ONLY — a path segment throws at startup
+EXPO_PUBLIC_INTEGRITY_ENABLED=false               # Play Integrity (client WARN only)
+# EXPO_PUBLIC_INTEGRITY_CLOUD_PROJECT_NUMBER=      # fill in when the lender provides it
+```
+
+### Native dependencies (added via `npx expo install`)
+`@tanstack/react-query`, `expo-crypto`, `expo-secure-store`, `expo-screen-capture`,
+`expo-build-properties`, `@bam.tech/react-native-app-security`, `@expo/app-integrity`.
+(`expo-network`, `expo-local-authentication` were already present.) Always install with
+`npx expo install <pkg>` (never npm/yarn/pnpm add), then `npx expo install --fix` +
+`npx expo-doctor`.
+
+### Development build required (NOT Expo Go)
+Certificate pinning, FLAG_SECURE / iOS app-switcher blur, the network-security-config plugin,
+`allowBackup=false`, and Play Integrity only take effect in a **development build** after
+`npx expo prebuild`. They are NOT observable in Expo Go or on web:
+
+```bash
+cd apps/mobile
+npx expo prebuild --clean
+npx expo run:android        # or an EAS development build (see §2)
+```
+
+### Certificate pins — derive the real SPKI hashes before a production build
+`app.json` ships TWO **placeholder** pins for `online.alangcredits.com`
+(`PLACEHOLDER_LEAF_SPKI_SHA256_BASE64=` / `PLACEHOLDER_INTERMEDIATE_SPKI_SHA256_BASE64=`) because
+the host is not reachable from this build environment (open point **D-PINS**). Replace BOTH with
+the real leaf + intermediate hashes (never ship a single pin):
+
+```bash
+# 1. Dump the served certificate chain:
+openssl s_client -servername online.alangcredits.com -connect online.alangcredits.com:443 -showcerts </dev/null
+
+# 2. For EACH cert PEM (leaf + its issuing intermediate), compute the SPKI SHA-256 (base64):
+openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | openssl enc -base64
+```
+Paste the two resulting base64 values into the `sslPinning["online.alangcredits.com"]` array in
+`apps/mobile/app.json`, then `npx expo prebuild --clean` and rebuild.
+
+### Verification (from `apps/mobile`, unless noted)
+```bash
+npx expo lint          # clean
+npx tsc --noEmit       # clean
+npx expo-doctor        # no unresolved issues for the new native libs
+npm test --workspace @app/shared   # green, incl. the new isoDateTimeToIstDate cases
+```
+
+---
+
 ## Which Expo workflow for this app?
 
 | Stage | Mode | Why |

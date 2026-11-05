@@ -1,20 +1,22 @@
 /**
- * S3: OTP verification — PRD 8.3, with its error states:
- *   wrong code (attempts left) -> expired code -> too many attempts (temporary cooldown).
+ * S3: OTP verification — PRD 8.3.
  *
- * PROTOTYPE verify rules (no backend yet), so each state can be reviewed:
- *   000000  -> code expired          111111 -> wrong code (3 wrong tries = cooldown)
- *   any other 6 digits -> success
+ * LIVE mode (EXPO_PUBLIC_API_MODE=live):
+ *   - POST /api/v1/auth/otp/verify with { mobileNumber, otp, deviceId }.
+ *   - `authenticated` -> completeLogin(tokens) -> /app-lock-setup.
+ *   - `date_of_birth_required` -> a DOB sub-step (three DD/MM/YYYY numeric fields), re-verify
+ *     with the same OTP + dateOfBirth.
+ *   - Wrong/expired/used OTP, wrong DOB, and the 15-minute server lock all collapse into ONE
+ *     non-revealing message. NO client attempts counter, NO client lock timer (the server owns
+ *     the lock). The resend countdown is a UI minimum; a server 429 extends the friendly wait.
+ *   - DOB is NEVER logged or persisted (component state only, for the verify call).
  *
- * TODO (M-02):
- *  - POST /v1/auth/otp/verify; store refresh token in SecureStore, access token in memory
- *  - POST /v1/auth/otp/request for resend (resendAfterSec from the server)
- *  - map AUTH_INVALID_OTP (attemptsLeft) / AUTH_OTP_EXPIRED / AUTH_OTP_ATTEMPTS_EXCEEDED (retryAfterSec)
- *  - never show raw error codes; all strings move to i18n
+ * MOCK mode: the full three-mode prototype (000000 -> expired, 111111 -> wrong/cooldown) is kept
+ * so every state stays reviewable without a backend.
  */
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Text, View } from 'react-native';
+import { Linking, Text, TextInput, View } from 'react-native';
 
 import {
   BrandHeader,
@@ -28,17 +30,26 @@ import {
   ScreenContainer,
   goBackOrLogin,
 } from '@/components/ui';
+import { apiMode } from '@/features/api/config';
+import * as endpoints from '@/features/api/endpoints';
+import { friendlyMessage } from '@/features/api/errors';
+import { useSecureScreen } from '@/features/security/useSecureScreen';
 import { Links } from '@/constants/links';
 import { maskMobile } from '@/features/auth/format';
 import { useSession } from '@/features/auth/session';
 import { PLACEHOLDER_SUPPORT } from '@/features/profile/placeholderData';
+import { parseIsoDate, todayIST } from '@app/shared';
 import { useAppTheme } from '@/hooks/use-theme';
 
 const RESEND_SECONDS = 30;
 const MAX_ATTEMPTS = 3;
 const LOCK_SECONDS = 300;
 
+const LIVE = apiMode() === 'live';
+const ONE_MESSAGE = "That code didn't work. Check it and try again, or request a new one.";
+
 type Mode = 'entry' | 'invalid' | 'expired' | 'locked';
+type LiveStep = 'otp' | 'dob';
 
 function formatCountdown(total: number): string {
   const m = Math.floor(total / 60);
@@ -47,8 +58,294 @@ function formatCountdown(total: number): string {
 }
 
 export default function OtpScreen() {
+  useSecureScreen();
+  const { mobile } = useSession();
+  // The session stores `+91XXXXXXXXXX`; the API wants the bare 10-digit number.
+  const mobileDigits = (mobile ?? '').replace(/\D/g, '').slice(-10);
+
+  if (LIVE) return <LiveOtp mobileDigits={mobileDigits} mobile={mobile} />;
+  return <MockOtp mobile={mobile} />;
+}
+
+/* ------------------------------- LIVE path -------------------------------- */
+
+function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: string | null }) {
   const theme = useAppTheme();
-  const { mobile, completeLogin } = useSession();
+  const { completeLogin } = useSession();
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState<LiveStep>('otp');
+  const [message, setMessage] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
+
+  // DOB sub-step fields (never logged, never persisted).
+  const [dd, setDd] = useState('');
+  const [mm, setMm] = useState('');
+  const [yyyy, setYyyy] = useState('');
+  const [dobError, setDobError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [secondsLeft]);
+
+  const canResend = secondsLeft === 0 && !verifying;
+  const canVerify = otp.length === 6 && !verifying;
+
+  async function submitVerify(dateOfBirth?: string) {
+    if (verifying) return;
+    setVerifying(true);
+    setMessage(null);
+    const res = await endpoints.otpVerify({ mobileNumber: mobileDigits, otp, dateOfBirth });
+    setVerifying(false);
+
+    if (!res.ok) {
+      if (res.error.kind === 'UNAUTHORIZED') setMessage(ONE_MESSAGE);
+      else if (res.error.kind === 'BAD_REQUEST') setMessage(ONE_MESSAGE);
+      else setMessage(friendlyMessage(res.error));
+      return;
+    }
+
+    if (res.data.status === 'authenticated') {
+      completeLogin({
+        accessToken: res.data.accessToken,
+        refreshToken: res.data.refreshToken,
+        expiresInSeconds: res.data.expiresInSeconds,
+      });
+      router.replace('/app-lock-setup');
+      return;
+    }
+
+    // date_of_birth_required — keep the same OTP, switch to the DOB sub-step.
+    setStep('dob');
+  }
+
+  function onOtpChange(next: string) {
+    setOtp(next);
+    if (message) setMessage(null);
+  }
+
+  function onSubmitDob() {
+    setDobError(null);
+    const day = dd.padStart(2, '0');
+    const month = mm.padStart(2, '0');
+    const year = yyyy;
+    if (year.length !== 4 || !month || !day) {
+      setDobError('Enter your date of birth as DD / MM / YYYY.');
+      return;
+    }
+    const iso = `${year}-${month}-${day}`;
+    try {
+      parseIsoDate(iso);
+    } catch {
+      setDobError('That date of birth is not valid.');
+      return;
+    }
+    const y = Number(year);
+    const currentYear = Number(todayIST().slice(0, 4));
+    if (y < 1900 || y > currentYear) {
+      setDobError('That date of birth is not valid.');
+      return;
+    }
+    if (iso > todayIST()) {
+      setDobError('Date of birth cannot be in the future.');
+      return;
+    }
+    void submitVerify(iso);
+  }
+
+  async function onResend() {
+    if (!canResend) return;
+    setOtp('');
+    setMessage(null);
+    setSecondsLeft(RESEND_SECONDS);
+    const res = await endpoints.otpRequest(mobileDigits);
+    if (!res.ok && res.error.kind === 'RATE_LIMITED') {
+      setMessage(friendlyMessage(res.error));
+    }
+  }
+
+  const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption } as const;
+
+  return (
+    <ScreenContainer tone="canvas">
+      <BrandHeader title="Verify number" showBack />
+
+      <View style={{ gap: theme.spacing.sm }}>
+        <Text
+          accessibilityRole="header"
+          style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.heading, fontWeight: theme.typography.weight.bold }}
+        >
+          {step === 'otp' ? 'Verify your number' : 'Confirm your date of birth'}
+        </Text>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 }}>
+          {step === 'otp' ? (
+            <>
+              Enter the 6-digit code sent to{' '}
+              <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.semibold }}>{maskMobile(mobile)}</Text>
+            </>
+          ) : (
+            'For your security, please confirm your date of birth to continue.'
+          )}
+        </Text>
+        <Text
+          accessibilityRole="link"
+          onPress={step === 'dob' ? () => setStep('otp') : goBackOrLogin}
+          style={{ color: theme.colors.primary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.medium, paddingVertical: theme.spacing.xs }}
+        >
+          {step === 'dob' ? 'Back to code' : 'Change number'}
+        </Text>
+      </View>
+
+      {step === 'otp' ? (
+        <View style={{ gap: theme.spacing.md }}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold, letterSpacing: 0.6 }}>
+            ONE-TIME PASSWORD (OTP)
+          </Text>
+          <OtpInput
+            value={otp}
+            onChange={onOtpChange}
+            onComplete={() => void submitVerify()}
+            hasError={message !== null}
+            autoFocus
+          />
+          {message ? (
+            <View accessible accessibilityLiveRegion="polite" style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Icon name="alert-circle" size={18} color="danger" />
+              <Text style={{ flex: 1, color: theme.colors.danger, fontSize: theme.typography.size.caption + 1 }}>{message}</Text>
+            </View>
+          ) : null}
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Icon name="time-outline" size={20} color="textSecondary" />
+              <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
+                {canResend ? 'You can request a new code' : 'Resend code in '}
+                {canResend ? null : (
+                  <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.bold }}>{formatCountdown(secondsLeft)}</Text>
+                )}
+              </Text>
+            </View>
+            <Button label="Resend OTP" variant="ghost" onPress={onResend} disabled={!canResend} />
+          </View>
+
+          <Button label="Verify & Proceed" rightIcon="arrow-forward" onPress={() => void submitVerify()} disabled={!canVerify} loading={verifying} />
+
+          <View style={{ alignItems: 'center' }}>
+            <Pill icon="checkmark-circle-outline" label="SMS autofill supported" color="success" background="canvas" />
+          </View>
+        </View>
+      ) : (
+        <DobStep
+          dd={dd}
+          mm={mm}
+          yyyy={yyyy}
+          setDd={(v) => { setDd(v); if (dobError) setDobError(null); }}
+          setMm={(v) => { setMm(v); if (dobError) setDobError(null); }}
+          setYyyy={(v) => { setYyyy(v); if (dobError) setDobError(null); }}
+          error={dobError ?? message}
+          submitting={verifying}
+          onSubmit={onSubmitDob}
+        />
+      )}
+
+      <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+          <Icon name="help-circle-outline" size={22} color="textSecondary" />
+          <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.semibold }}>
+            Didn&apos;t receive the code?
+          </Text>
+        </View>
+        <Text style={[caption, { lineHeight: 20 }]}>Network delays can happen. You can also reach support:</Text>
+        <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+          <Button label="WhatsApp" variant="secondary" leftIcon="logo-whatsapp" style={{ flex: 1, paddingHorizontal: theme.spacing.sm }} onPress={() => Linking.openURL(Links.supportWhatsApp)} />
+          <Button label="Call support" variant="secondary" leftIcon="call-outline" style={{ flex: 1, paddingHorizontal: theme.spacing.sm }} onPress={() => Linking.openURL(Links.supportPhone)} />
+        </View>
+        <Text style={[caption, { textAlign: 'center' }]}>Toll-free {PLACEHOLDER_SUPPORT.phoneDisplay}</Text>
+      </Card>
+
+      <View style={{ flex: 1, justifyContent: 'flex-end', flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm, alignSelf: 'center' }}>
+        <Icon name="lock-closed-outline" size={14} color="success" />
+        <Text style={caption}>256-bit encrypted session</Text>
+      </View>
+    </ScreenContainer>
+  );
+}
+
+function DobStep({
+  dd,
+  mm,
+  yyyy,
+  setDd,
+  setMm,
+  setYyyy,
+  error,
+  submitting,
+  onSubmit,
+}: {
+  dd: string;
+  mm: string;
+  yyyy: string;
+  setDd: (v: string) => void;
+  setMm: (v: string) => void;
+  setYyyy: (v: string) => void;
+  error: string | null;
+  submitting: boolean;
+  onSubmit: () => void;
+}) {
+  const theme = useAppTheme();
+  const digits = (t: string, max: number) => t.replace(/\D/g, '').slice(0, max);
+
+  const fieldStyle = {
+    minHeight: 56,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1.5,
+    borderColor: error ? theme.colors.danger : 'transparent',
+    fontSize: theme.typography.size.subtitle,
+    color: theme.colors.textPrimary,
+    textAlign: 'center' as const,
+    fontWeight: theme.typography.weight.semibold,
+  };
+  const label = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.medium } as const;
+
+  return (
+    <View style={{ gap: theme.spacing.md }}>
+      <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold, letterSpacing: 0.6 }}>
+        DATE OF BIRTH
+      </Text>
+      <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+        <View style={{ flex: 1, gap: theme.spacing.xs }}>
+          <Text style={label}>Day</Text>
+          <TextInput value={dd} onChangeText={(t) => setDd(digits(t, 2))} keyboardType="number-pad" maxLength={2} placeholder="DD" placeholderTextColor={theme.colors.textSecondary} style={fieldStyle} accessibilityLabel="Day of birth" />
+        </View>
+        <View style={{ flex: 1, gap: theme.spacing.xs }}>
+          <Text style={label}>Month</Text>
+          <TextInput value={mm} onChangeText={(t) => setMm(digits(t, 2))} keyboardType="number-pad" maxLength={2} placeholder="MM" placeholderTextColor={theme.colors.textSecondary} style={fieldStyle} accessibilityLabel="Month of birth" />
+        </View>
+        <View style={{ flex: 1.3, gap: theme.spacing.xs }}>
+          <Text style={label}>Year</Text>
+          <TextInput value={yyyy} onChangeText={(t) => setYyyy(digits(t, 4))} keyboardType="number-pad" maxLength={4} placeholder="YYYY" placeholderTextColor={theme.colors.textSecondary} style={fieldStyle} accessibilityLabel="Year of birth" />
+        </View>
+      </View>
+      {error ? (
+        <View accessible accessibilityLiveRegion="polite" style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+          <Icon name="alert-circle" size={18} color="danger" />
+          <Text style={{ flex: 1, color: theme.colors.danger, fontSize: theme.typography.size.caption + 1 }}>{error}</Text>
+        </View>
+      ) : null}
+      <Button label="Confirm & Proceed" rightIcon="arrow-forward" onPress={onSubmit} disabled={submitting} loading={submitting} />
+    </View>
+  );
+}
+
+/* ------------------------------- MOCK path -------------------------------- */
+
+function MockOtp({ mobile }: { mobile: string | null }) {
+  const theme = useAppTheme();
+  const { completeLogin } = useSession();
   const [otp, setOtp] = useState('');
   const [mode, setMode] = useState<Mode>('entry');
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
@@ -56,14 +353,12 @@ export default function OtpScreen() {
   const [lockLeft, setLockLeft] = useState(LOCK_SECONDS);
   const [verifying, setVerifying] = useState(false);
 
-  // Resend countdown
   useEffect(() => {
     if (secondsLeft <= 0) return;
     const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearTimeout(id);
   }, [secondsLeft]);
 
-  // Cooldown countdown; unlocks and resets attempts when it ends
   useEffect(() => {
     if (mode !== 'locked') return;
     const id = setTimeout(() => {
@@ -89,7 +384,6 @@ export default function OtpScreen() {
 
   function onVerify(code: string = otp) {
     if (code.length !== 6 || verifying || mode === 'locked') return;
-
     if (code === '000000') {
       setMode('expired');
       return;
@@ -105,7 +399,6 @@ export default function OtpScreen() {
       }
       return;
     }
-
     setVerifying(true);
     completeLogin();
     router.replace('/app-lock-setup');
@@ -116,7 +409,6 @@ export default function OtpScreen() {
     setOtp('');
     setMode('entry');
     setSecondsLeft(RESEND_SECONDS);
-    // TODO (M-02): POST /v1/auth/otp/request
   }
 
   const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption } as const;
@@ -146,7 +438,6 @@ export default function OtpScreen() {
         </Text>
       </View>
 
-      {/* Too many attempts: cooldown */}
       {locked ? (
         <>
           <View
@@ -184,7 +475,6 @@ export default function OtpScreen() {
         </>
       ) : null}
 
-      {/* Code entry */}
       <View style={{ gap: theme.spacing.md }}>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold, letterSpacing: 0.6 }}>
           ONE-TIME PASSWORD (OTP)
@@ -260,7 +550,6 @@ export default function OtpScreen() {
         </>
       ) : null}
 
-      {/* Help: always available, and the way out while locked */}
       <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
           <Icon name="help-circle-outline" size={22} color="textSecondary" />
@@ -274,20 +563,8 @@ export default function OtpScreen() {
             : 'Network delays can happen. You can also reach support:'}
         </Text>
         <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-          <Button
-            label="WhatsApp"
-            variant="secondary"
-            leftIcon="logo-whatsapp"
-            style={{ flex: 1, paddingHorizontal: theme.spacing.sm }}
-            onPress={() => Linking.openURL(Links.supportWhatsApp)}
-          />
-          <Button
-            label="Call support"
-            variant="secondary"
-            leftIcon="call-outline"
-            style={{ flex: 1, paddingHorizontal: theme.spacing.sm }}
-            onPress={() => Linking.openURL(Links.supportPhone)}
-          />
+          <Button label="WhatsApp" variant="secondary" leftIcon="logo-whatsapp" style={{ flex: 1, paddingHorizontal: theme.spacing.sm }} onPress={() => Linking.openURL(Links.supportWhatsApp)} />
+          <Button label="Call support" variant="secondary" leftIcon="call-outline" style={{ flex: 1, paddingHorizontal: theme.spacing.sm }} onPress={() => Linking.openURL(Links.supportPhone)} />
         </View>
         <Text style={[caption, { textAlign: 'center' }]}>Toll-free {PLACEHOLDER_SUPPORT.phoneDisplay}</Text>
         {locked ? <Button label="Change mobile number" variant="ghost" leftIcon="create-outline" onPress={goBackOrLogin} /> : null}

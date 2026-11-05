@@ -7,9 +7,12 @@ import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { BrandMark, Icon, SegmentedControl, StatusBadge } from '@/components/ui';
+import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
 
 import type { Loan } from '../placeholderData';
+
+const SHOW_SEGMENTS = showUnbackedScreens();
 
 export type WorkspaceSegment = 'overview' | 'schedule' | 'history';
 
@@ -102,7 +105,9 @@ export function WorkspaceHeader({
         </View>
       </View>
 
-      <SegmentedControl options={OPTIONS} value={segment} onChange={onChange} />
+      {SHOW_SEGMENTS ? (
+        <SegmentedControl options={OPTIONS} value={segment} onChange={onChange} />
+      ) : null}
     </View>
   );
 }

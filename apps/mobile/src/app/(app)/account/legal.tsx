@@ -4,6 +4,7 @@
  *
  * TODO (M-09): document list, versions and URLs from GET /v1/config; i18n
  */
+import { Redirect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { Linking, Pressable, Text, View } from 'react-native';
 
@@ -15,7 +16,11 @@ import {
   PLACEHOLDER_LENDER,
   type LegalDocument,
 } from '@/features/profile/placeholderData';
+import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
+
+// Account screens are hidden in live mode (no profile endpoint) — retained for mock mode.
+const SHOW_ACCOUNT = showUnbackedScreens();
 
 const URL_BY_KEY: Record<string, string> = {
   privacy: Links.privacyPolicy,
@@ -27,6 +32,8 @@ const URL_BY_KEY: Record<string, string> = {
 export default function LegalScreen() {
   const theme = useAppTheme();
   const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption } as const;
+
+  if (!SHOW_ACCOUNT) return <Redirect href="/loans" />;
 
   return (
     <ScreenContainer tone="canvas">

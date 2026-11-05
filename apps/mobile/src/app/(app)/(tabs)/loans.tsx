@@ -1,10 +1,14 @@
 /**
- * S5: Home (tab) — answers in seconds: how much do I owe, am I overdue, what is due next,
- * which loans do I have, how far along am I. Purely informational: no payment action.
- * Sticky header pinned at the top while content scrolls smoothly beneath.
+ * S5: Home (tab) — how much do I owe, am I overdue, which loans do I have. Purely informational:
+ * no payment action. Sticky header pinned at the top while content scrolls beneath.
+ *
+ * Both modes feed VMs (LoanListItemVM) through the dataSource seam. In LIVE mode the summary is
+ * built by buildLoansSummary (no "Next due", no "Last updated"); the placeholder customer name /
+ * profile avatar are gated to mock mode so no hidden screen is reachable. The OfflineBanner is
+ * fed by live connectivity in live mode and by the mock env in mock mode (both via useIsOffline).
  */
 import { Redirect, router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -15,19 +19,21 @@ import Animated, {
   ReduceMotion,
 } from 'react-native-reanimated';
 
+import { formatINR } from '@app/shared';
+
 import { BrandMark, Card, Icon, IconTile, PressableScale, ScreenContainer } from '@/components/ui';
+import { buildLoansSummary } from '@/features/api/adapter';
+import { useLoansData } from '@/features/api/dataSource';
+import { showUnbackedScreens } from '@/features/api/features';
+import { useSecureScreen } from '@/features/security/useSecureScreen';
 import { HomeSkeleton } from '@/features/system/components/Skeletons';
 import { LoadErrorState, NoLoansState, OfflineBanner } from '@/features/system/components/SystemStates';
-import { useMockQuery } from '@/features/system/mockQuery';
-import { dueLabel, formatINR } from '@/features/loans/format';
 import { LoanCard } from '@/features/loans/components/LoanCard';
-import {
-  PLACEHOLDER_CUSTOMER,
-  PLACEHOLDER_LOANS,
-  summarize,
-  type Loan,
-} from '@/features/loans/placeholderData';
+import { PLACEHOLDER_CUSTOMER } from '@/features/loans/placeholderData';
+import type { LoanListItemVM } from '@/features/api/vm';
 import { useAppTheme } from '@/hooks/use-theme';
+
+const SHOW_MOCK_EXTRAS = showUnbackedScreens();
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -40,12 +46,10 @@ function openLoan(loanId: string) {
   router.push({ pathname: '/loan/[loanId]', params: { loanId } });
 }
 
-/** Stable loader for the (prototype) loans request. */
-const loadLoans = () => PLACEHOLDER_LOANS;
-
 /** Chooses between loading, error, session-expired, empty and the real Home. */
 export default function HomeScreen() {
-  const query = useMockQuery('loans', loadLoans);
+  useSecureScreen();
+  const query = useLoansData();
 
   if (query.status === 'session_expired') return <Redirect href="/session-expired" />;
 
@@ -93,9 +97,9 @@ function AppBar() {
   );
 }
 
-function HomeContent({ loans }: { loans: Loan[] }) {
+function HomeContent({ loans }: { loans: LoanListItemVM[] }) {
   const theme = useAppTheme();
-  const summary = summarize(loans);
+  const summary = useMemo(() => buildLoansSummary(loans), [loans]);
   const { activeLoans, closedLoans } = summary;
   const allClosed = activeLoans.length === 0;
   // Closed loans stay collapsed, unless there is nothing else to show.
@@ -121,43 +125,45 @@ function HomeContent({ loans }: { loans: Loan[] }) {
               fontWeight: theme.typography.weight.bold,
             }}
           >
-            {greeting()}, {PLACEHOLDER_CUSTOMER.firstName}
+            {SHOW_MOCK_EXTRAS ? `${greeting()}, ${PLACEHOLDER_CUSTOMER.firstName}` : greeting()}
           </Text>
           <Text numberOfLines={1} style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
             Here&apos;s your loan summary
           </Text>
         </View>
       </View>
-      <PressableScale
-        accessibilityRole="button"
-        accessibilityLabel="Open profile"
-        onPress={() => router.navigate('/account')}
-        haptic
-        style={{
-          width: 42,
-          height: 42,
-          borderRadius: 21,
-          backgroundColor: theme.colors.primarySoft,
-          borderWidth: 1.5,
-          borderColor: theme.colors.primary,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Text
+      {SHOW_MOCK_EXTRAS ? (
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel="Open profile"
+          onPress={() => router.navigate('/account')}
+          haptic
           style={{
-            color: theme.colors.primary,
-            fontSize: theme.typography.size.body,
-            fontWeight: theme.typography.weight.bold,
-            textAlign: 'center',
-            textAlignVertical: 'center',
-            includeFontPadding: false,
-            lineHeight: 20,
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            backgroundColor: theme.colors.primarySoft,
+            borderWidth: 1.5,
+            borderColor: theme.colors.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {PLACEHOLDER_CUSTOMER.initials}
-        </Text>
-      </PressableScale>
+          <Text
+            style={{
+              color: theme.colors.primary,
+              fontSize: theme.typography.size.body,
+              fontWeight: theme.typography.weight.bold,
+              textAlign: 'center',
+              textAlignVertical: 'center',
+              includeFontPadding: false,
+              lineHeight: 20,
+            }}
+          >
+            {PLACEHOLDER_CUSTOMER.initials}
+          </Text>
+        </PressableScale>
+      ) : null}
     </View>
   );
 
@@ -173,14 +179,14 @@ function HomeContent({ loans }: { loans: Loan[] }) {
         >
           <Text style={label}>{allClosed ? 'Total outstanding' : 'Total outstanding (all active loans)'}</Text>
           <Text
-            accessibilityLabel={`Total outstanding ${formatINR(summary.totalOutstanding)}`}
+            accessibilityLabel={`Total outstanding ${formatINR(summary.totalOutstandingPaise)}`}
             style={{
               color: theme.colors.textPrimary,
               fontSize: theme.typography.size.heading + 8,
               fontWeight: theme.typography.weight.bold,
             }}
           >
-            {formatINR(summary.totalOutstanding)}
+            {formatINR(summary.totalOutstandingPaise)}
           </Text>
 
           {allClosed ? (
@@ -199,27 +205,17 @@ function HomeContent({ loans }: { loans: Loan[] }) {
               />
               <SummaryStat
                 label="Overdue"
-                value={formatINR(summary.overdueTotal)}
+                value={formatINR(summary.overdueTotalPaise)}
                 sub={
-                  summary.overdueTotal > 0
+                  summary.overdueTotalPaise > 0
                     ? `on ${summary.overdueLoanCount} ${summary.overdueLoanCount === 1 ? 'loan' : 'loans'}`
                     : 'none'
                 }
-                tone={summary.overdueTotal > 0 ? 'danger' : 'neutral'}
-                icon={summary.overdueTotal > 0 ? 'warning' : undefined}
-              />
-              <SummaryStat
-                label="Next due"
-                value={summary.nextDue ? formatINR(summary.nextDue.amount) : '\u2014'}
-                sub={summary.nextDue ? dueLabel(summary.nextDue.date).replace('Due ', '') : ''}
-                tone="primary"
+                tone={summary.overdueTotalPaise > 0 ? 'danger' : 'neutral'}
+                icon={summary.overdueTotalPaise > 0 ? 'warning' : undefined}
               />
             </View>
           )}
-
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-            Last updated 10 mins ago
-          </Text>
         </Card>
       </Animated.View>
 
@@ -293,7 +289,7 @@ function HomeContent({ loans }: { loans: Loan[] }) {
                 >
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Closed loan ${loan.accountNumber}, ${loan.productName}. Fully paid.`}
+                    accessibilityLabel={`Closed loan ${loan.accountNumber}. Fully paid.`}
                     onPress={() => openLoan(loan.loanId)}
                     style={({ pressed }) => ({
                       flexDirection: 'row',
@@ -309,10 +305,10 @@ function HomeContent({ loans }: { loans: Loan[] }) {
                     <IconTile name="checkmark-circle-outline" size={36} background="successSoft" color="success" />
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.medium }}>
-                        {loan.accountNumber} {'\u2022'} {loan.productName}
+                        {loan.accountNumber}
                       </Text>
                       <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-                        Fully paid {'\u2022'} {loan.emisPaid} of {loan.totalEmis} EMIs
+                        Fully paid
                       </Text>
                     </View>
                     <Icon name="chevron-forward" size={18} color="textSecondary" />

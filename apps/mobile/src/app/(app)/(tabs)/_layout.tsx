@@ -10,7 +10,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
+
+const SHOW_PROFILE_TAB = showUnbackedScreens();
 
 function TabIcon({
   focused,
@@ -99,6 +102,8 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           headerShown: false,
+          // Hidden in live mode (no profile endpoint) — code retained for mock mode.
+          href: SHOW_PROFILE_TAB ? undefined : null,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon
               focused={focused}
