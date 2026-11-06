@@ -3,7 +3,7 @@
  *
  * LIVE mode (EXPO_PUBLIC_API_MODE=live):
  *   - POST /api/v1/auth/otp/verify with { mobileNumber, otp, deviceId }.
- *   - `authenticated` -> completeLogin(tokens) -> /app-lock-setup.
+ *   - `authenticated` -> completeLogin(tokens) -> /loans.
  *   - `date_of_birth_required` -> a DOB sub-step (three DD/MM/YYYY numeric fields), re-verify
  *     with the same OTP + dateOfBirth.
  *   - Wrong/expired/used OTP, wrong DOB, and the 15-minute server lock all collapse into ONE
@@ -16,7 +16,7 @@
  */
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 
 import {
   BrandHeader,
@@ -34,10 +34,8 @@ import { apiMode } from '@/features/api/config';
 import * as endpoints from '@/features/api/endpoints';
 import { friendlyMessage } from '@/features/api/errors';
 import { useSecureScreen } from '@/features/security/useSecureScreen';
-import { Links } from '@/constants/links';
 import { maskMobile } from '@/features/auth/format';
 import { useSession } from '@/features/auth/session';
-import { PLACEHOLDER_SUPPORT } from '@/features/profile/placeholderData';
 import { parseIsoDate, todayIST } from '@app/shared';
 import { useAppTheme } from '@/hooks/use-theme';
 
@@ -113,7 +111,7 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
         refreshToken: res.data.refreshToken,
         expiresInSeconds: res.data.expiresInSeconds,
       });
-      router.replace('/app-lock-setup');
+      router.replace('/loans');
       return;
     }
 
@@ -166,12 +164,12 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
     }
   }
 
-  const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption } as const;
-
   return (
-    <ScreenContainer tone="canvas">
-      <BrandHeader title="Verify number" showBack />
-
+    <ScreenContainer
+      tone="canvas"
+      header={<BrandHeader title="Verify number" showBack />}
+      contentStyle={{ justifyContent: 'center' }}
+    >
       <View style={{ gap: theme.spacing.sm }}>
         <Text
           accessibilityRole="header"
@@ -250,25 +248,6 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
         />
       )}
 
-      <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-          <Icon name="help-circle-outline" size={22} color="textSecondary" />
-          <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.semibold }}>
-            Didn&apos;t receive the code?
-          </Text>
-        </View>
-        <Text style={[caption, { lineHeight: 20 }]}>Network delays can happen. You can also reach support:</Text>
-        <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-          <Button label="WhatsApp" variant="secondary" leftIcon="logo-whatsapp" style={{ flex: 1, paddingHorizontal: theme.spacing.sm }} onPress={() => Linking.openURL(Links.supportWhatsApp)} />
-          <Button label="Call support" variant="secondary" leftIcon="call-outline" style={{ flex: 1, paddingHorizontal: theme.spacing.sm }} onPress={() => Linking.openURL(Links.supportPhone)} />
-        </View>
-        <Text style={[caption, { textAlign: 'center' }]}>Toll-free {PLACEHOLDER_SUPPORT.phoneDisplay}</Text>
-      </Card>
-
-      <View style={{ flex: 1, justifyContent: 'flex-end', flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm, alignSelf: 'center' }}>
-        <Icon name="lock-closed-outline" size={14} color="success" />
-        <Text style={caption}>256-bit encrypted session</Text>
-      </View>
     </ScreenContainer>
   );
 }
@@ -401,7 +380,7 @@ function MockOtp({ mobile }: { mobile: string | null }) {
     }
     setVerifying(true);
     completeLogin();
-    router.replace('/app-lock-setup');
+    router.replace('/loans');
   }
 
   function onResend() {
@@ -415,9 +394,11 @@ function MockOtp({ mobile }: { mobile: string | null }) {
   const locked = mode === 'locked';
 
   return (
-    <ScreenContainer tone="canvas">
-      <BrandHeader title="Verify number" showBack />
-
+    <ScreenContainer
+      tone="canvas"
+      header={<BrandHeader title="Verify number" showBack />}
+      contentStyle={{ justifyContent: 'center' }}
+    >
       <View style={{ gap: theme.spacing.sm }}>
         <Text
           accessibilityRole="header"
@@ -550,30 +531,9 @@ function MockOtp({ mobile }: { mobile: string | null }) {
         </>
       ) : null}
 
-      <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-          <Icon name="help-circle-outline" size={22} color="textSecondary" />
-          <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.semibold }}>
-            {locked ? 'Need help signing in?' : "Didn't receive the code?"}
-          </Text>
-        </View>
-        <Text style={[caption, { lineHeight: 20 }]}>
-          {locked
-            ? 'Support can help you sign in, or you can use a different number.'
-            : 'Network delays can happen. You can also reach support:'}
-        </Text>
-        <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-          <Button label="WhatsApp" variant="secondary" leftIcon="logo-whatsapp" style={{ flex: 1, paddingHorizontal: theme.spacing.sm }} onPress={() => Linking.openURL(Links.supportWhatsApp)} />
-          <Button label="Call support" variant="secondary" leftIcon="call-outline" style={{ flex: 1, paddingHorizontal: theme.spacing.sm }} onPress={() => Linking.openURL(Links.supportPhone)} />
-        </View>
-        <Text style={[caption, { textAlign: 'center' }]}>Toll-free {PLACEHOLDER_SUPPORT.phoneDisplay}</Text>
-        {locked ? <Button label="Change mobile number" variant="ghost" leftIcon="create-outline" onPress={goBackOrLogin} /> : null}
-      </Card>
-
-      <View style={{ flex: 1, justifyContent: 'flex-end', flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm, alignSelf: 'center' }}>
-        <Icon name="lock-closed-outline" size={14} color="success" />
-        <Text style={caption}>256-bit encrypted session</Text>
-      </View>
+      {locked ? (
+        <Button label="Change mobile number" variant="ghost" leftIcon="create-outline" onPress={goBackOrLogin} />
+      ) : null}
     </ScreenContainer>
   );
 }

@@ -1,6 +1,6 @@
 /**
  * Session expired — blocking screen shown when the server says the session is no longer valid.
- * Signing in again needs an OTP (an expired session cannot be resumed with biometrics).
+ * Signing in again needs an OTP.
  *
  * TODO (M-03): trigger from the API client on 401 after a failed single-flight refresh.
  */

@@ -26,11 +26,10 @@ import { PLACEHOLDER_CUSTOMER } from '@/features/loans/placeholderData';
 import { PLACEHOLDER_LENDER } from '@/features/profile/placeholderData';
 import { LanguageSheet } from '@/features/settings/components/LanguageSheet';
 import { LANGUAGE_LABEL, usePreferences } from '@/features/settings/preferences';
-import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
 
-// Hidden in live mode (no profile endpoint) — code retained for mock mode.
-const SHOW_PROFILE = showUnbackedScreens();
+// Profile is hidden from the app in all modes — code retained but the screen is unreachable.
+const SHOW_PROFILE = false;
 
 export default function ProfileScreen() {
   const theme = useAppTheme();

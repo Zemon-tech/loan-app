@@ -16,11 +16,10 @@ import {
   PLACEHOLDER_LENDER,
   type LegalDocument,
 } from '@/features/profile/placeholderData';
-import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
 
-// Account screens are hidden in live mode (no profile endpoint) — retained for mock mode.
-const SHOW_ACCOUNT = showUnbackedScreens();
+// Account screens are hidden in all modes (Profile removed) — retained but unreachable.
+const SHOW_ACCOUNT = false;
 
 const URL_BY_KEY: Record<string, string> = {
   privacy: Links.privacyPolicy,

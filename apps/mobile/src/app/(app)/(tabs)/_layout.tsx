@@ -10,10 +10,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
 
-const SHOW_PROFILE_TAB = showUnbackedScreens();
+// Profile is hidden from the app in all modes. Code is retained but the tab is never reachable.
+const SHOW_PROFILE_TAB = false;
 
 function TabIcon({
   focused,

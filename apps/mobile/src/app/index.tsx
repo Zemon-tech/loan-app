@@ -23,7 +23,7 @@ const MIN_SPLASH_MS = 1200;
 export default function SplashScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const { isLoggedIn, isAppLockEnabled, isLocked, isBootstrapping } = useSession();
+  const { isLoggedIn, isBootstrapping } = useSession();
   const [destination, setDestination] = useState<Href | null>(null);
 
   useEffect(() => {
@@ -44,7 +44,6 @@ export default function SplashScreen() {
       if (status === 'maintenance') return setDestination('/maintenance');
       if (status === 'update_required') return setDestination('/update-required');
       if (!isLoggedIn) return setDestination('/login');
-      if (isAppLockEnabled && isLocked) return setDestination('/unlock');
       return setDestination('/loans');
     }
 

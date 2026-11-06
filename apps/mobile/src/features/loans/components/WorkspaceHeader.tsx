@@ -82,9 +82,6 @@ export function WorkspaceHeader({
         <BrandMark size={32} />
 
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
-            Loan Workspace
-          </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: theme.spacing.sm }}>
             <Text
               accessibilityRole="header"

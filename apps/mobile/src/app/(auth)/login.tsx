@@ -6,18 +6,16 @@
  *  - POST /v1/auth/otp/request; pass otpRequestId + masked mobile to OTP screen
  *  - handle 429 ("Too many attempts. Try again in {n} minutes.")
  *  - copy must NOT reveal whether the number is registered
- *  - Privacy / Terms URLs from /config; all strings move to i18n
+ *  - all strings move to i18n
  */
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
-import { BrandMark, Button, Card, Icon, Pill, ScreenContainer } from '@/components/ui';
+import { BrandMark, Button, Icon, ScreenContainer } from '@/components/ui';
 import { apiMode } from '@/features/api/config';
 import * as endpoints from '@/features/api/endpoints';
 import { friendlyMessage } from '@/features/api/errors';
-import { Links } from '@/constants/links';
 import { formatMobileInput, INDIAN_MOBILE, sanitizeMobile } from '@/features/auth/format';
 import { useSession } from '@/features/auth/session';
 import { useAppTheme } from '@/hooks/use-theme';
@@ -64,22 +62,8 @@ export default function LoginScreen() {
   const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption };
 
   return (
-    <ScreenContainer tone="canvas">
-      {/* Trust row */}
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: theme.spacing.sm,
-        }}
-      >
-        <Pill dot="success" label="RBI regulated system" uppercase />
-        <Pill icon="lock-closed-outline" label="256-bit Encrypted" background="canvas" />
-      </View>
-
-      <Card tone="card" style={{ padding: theme.spacing.xl, gap: theme.spacing.lg, borderRadius: theme.radius.xl }}>
+    <ScreenContainer tone="canvas" contentStyle={{ justifyContent: 'center' }}>
+      <View style={{ gap: theme.spacing.lg }}>
         <BrandMark size={60} verified />
 
         <View style={{ gap: theme.spacing.sm }}>
@@ -190,43 +174,6 @@ export default function LoginScreen() {
         </View>
 
         <Button label="Continue" rightIcon="arrow-forward" onPress={onContinue} disabled={!isValid || submitting} loading={submitting} />
-
-        <View
-          style={{
-            flexDirection: 'row',
-            gap: theme.spacing.md,
-            padding: theme.spacing.lg,
-            borderRadius: theme.radius.lg,
-            backgroundColor: theme.colors.canvas,
-          }}
-        >
-          <Icon name="information-circle-outline" size={20} color="textSecondary" />
-          <Text style={[caption, { flex: 1, lineHeight: 20 }]}>
-            This app only shows your loan information. Your records stay private and every access is logged.
-          </Text>
-        </View>
-      </Card>
-
-      <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', gap: theme.spacing.lg }}>
-        <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, lineHeight: 22 }}>
-          By continuing, you agree to our{' '}
-          <Text
-            accessibilityRole="link"
-            onPress={() => WebBrowser.openBrowserAsync(Links.terms)}
-            style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.semibold, textDecorationLine: 'underline' }}
-          >
-            Terms & Conditions
-          </Text>{' '}
-          and{' '}
-          <Text
-            accessibilityRole="link"
-            onPress={() => WebBrowser.openBrowserAsync(Links.privacyPolicy)}
-            style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.semibold, textDecorationLine: 'underline' }}
-          >
-            Privacy Policy
-          </Text>
-          .
-        </Text>
       </View>
     </ScreenContainer>
   );

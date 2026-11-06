@@ -6,12 +6,11 @@
  *     flips `hasSession`. Boot rehydrates by reading the stored refresh token (no proactive
  *     refresh — the first authed request refreshes on demand, the sole trigger being a 401 with
  *     Token-Expired: true). `logout()` best-effort hits the logout endpoint, then clears tokens,
- *     the query cache, and App Lock. A `sessionExpired` event (refresh failed) clears the same.
+ *     and the query cache. A `sessionExpired` event (refresh failed) clears the same.
  *   - Mock mode: `completeLogin()` with no args is the old flag flip; everything else is inert.
  *
  * The access token lives in memory only; the refresh token in SecureStore
- * (WHEN_UNLOCKED_THIS_DEVICE_ONLY, no biometric gate). App Lock (expo-local-authentication) is a
- * separate UI gate and is unchanged. `mobile` is display/masking only, never persisted.
+ * (WHEN_UNLOCKED_THIS_DEVICE_ONLY). `mobile` is display/masking only, never persisted.
  */
 import {
   createContext,
@@ -40,19 +39,11 @@ interface SessionState {
   isLoggedIn: boolean;
   /** The mobile number entered at login, as `+91XXXXXXXXXX` (display/masking only). */
   mobile: string | null;
-  /** User chose to protect the app with biometrics / device authentication. */
-  isAppLockEnabled: boolean;
-  /** True while the app lock screen must be passed before showing data. */
-  isLocked: boolean;
   /** True until the boot rehydration (loadRefreshToken) has completed. */
   isBootstrapping: boolean;
   startLogin: (mobile: string) => void;
   /** Live: pass the verify tokens. Mock: call with no args (flag flip). */
   completeLogin: (tokens?: LoginTokens) => void;
-  setAppLockEnabled: (enabled: boolean) => void;
-  /** Lock the app (App Lock enabled only) after it was in the background. */
-  lock: () => void;
-  unlock: () => void;
   logout: () => void;
 }
 
@@ -63,8 +54,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [hasSession, setHasSession] = useState(false);
   const [mockLoggedIn, setMockLoggedIn] = useState(false);
   const [mobile, setMobile] = useState<string | null>(null);
-  const [isAppLockEnabled, setIsAppLockEnabled] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(live);
 
   // Boot rehydration: a stored refresh token means "has a session" (no proactive refresh).
@@ -92,7 +81,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       queryClient.clear();
       setHasSession(false);
       setMockLoggedIn(false);
-      setIsLocked(false);
     };
     const unsub = onSessionExpired(() => clearSession.current());
     return unsub;
@@ -102,8 +90,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     () => ({
       isLoggedIn: live ? hasSession : mockLoggedIn,
       mobile,
-      isAppLockEnabled,
-      isLocked,
       isBootstrapping,
       startLogin: (m: string) => setMobile(m),
       completeLogin: (tokens?: LoginTokens) => {
@@ -120,11 +106,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         } else {
           setMockLoggedIn(true);
         }
-        setIsLocked(false);
       },
-      setAppLockEnabled: (enabled: boolean) => setIsAppLockEnabled(enabled),
-      lock: () => setIsLocked(true),
-      unlock: () => setIsLocked(false),
       logout: () => {
         if (live) {
           // Best-effort server logout; ignore failure. Then clear local state.
@@ -137,12 +119,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
         setHasSession(false);
         setMockLoggedIn(false);
-        setIsLocked(false);
-        setIsAppLockEnabled(false);
         setMobile(null);
       },
     }),
-    [live, hasSession, mockLoggedIn, mobile, isAppLockEnabled, isLocked, isBootstrapping],
+    [live, hasSession, mockLoggedIn, mobile, isBootstrapping],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

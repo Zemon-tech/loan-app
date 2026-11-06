@@ -21,7 +21,7 @@ import Animated, {
 
 import { formatINR } from '@app/shared';
 
-import { BrandMark, Card, Icon, IconTile, PressableScale, ScreenContainer } from '@/components/ui';
+import { BrandMark, Card, Icon, IconTile, ScreenContainer } from '@/components/ui';
 import { buildLoansSummary } from '@/features/api/adapter';
 import { useLoansData } from '@/features/api/dataSource';
 import { showUnbackedScreens } from '@/features/api/features';
@@ -112,58 +112,20 @@ function HomeContent({ loans }: { loans: LoanListItemVM[] }) {
   } as const;
 
   const homeHeader = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, flex: 1 }}>
-        <BrandMark size={36} />
-        <View style={{ flex: 1 }}>
-          <Text
-            accessibilityRole="header"
-            numberOfLines={1}
-            style={{
-              color: theme.colors.textPrimary,
-              fontSize: theme.typography.size.title,
-              fontWeight: theme.typography.weight.bold,
-            }}
-          >
-            {SHOW_MOCK_EXTRAS ? `${greeting()}, ${PLACEHOLDER_CUSTOMER.firstName}` : greeting()}
-          </Text>
-          <Text numberOfLines={1} style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
-            Here&apos;s your loan summary
-          </Text>
-        </View>
-      </View>
-      {SHOW_MOCK_EXTRAS ? (
-        <PressableScale
-          accessibilityRole="button"
-          accessibilityLabel="Open profile"
-          onPress={() => router.navigate('/account')}
-          haptic
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 21,
-            backgroundColor: theme.colors.primarySoft,
-            borderWidth: 1.5,
-            borderColor: theme.colors.primary,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text
-            style={{
-              color: theme.colors.primary,
-              fontSize: theme.typography.size.body,
-              fontWeight: theme.typography.weight.bold,
-              textAlign: 'center',
-              textAlignVertical: 'center',
-              includeFontPadding: false,
-              lineHeight: 20,
-            }}
-          >
-            {PLACEHOLDER_CUSTOMER.initials}
-          </Text>
-        </PressableScale>
-      ) : null}
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+      <BrandMark size={36} />
+      <Text
+        accessibilityRole="header"
+        numberOfLines={1}
+        style={{
+          color: theme.colors.textPrimary,
+          fontSize: theme.typography.size.title,
+          fontWeight: theme.typography.weight.bold,
+          flex: 1,
+        }}
+      >
+        {SHOW_MOCK_EXTRAS ? `${greeting()}, ${PLACEHOLDER_CUSTOMER.firstName}` : greeting()}
+      </Text>
     </View>
   );
 

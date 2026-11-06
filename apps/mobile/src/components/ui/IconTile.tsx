@@ -1,6 +1,6 @@
 /**
  * IconTile — rounded square holding one icon, optionally with a small corner badge.
- * The "simple security icon" used on App Lock, Unlock, Update and Maintenance screens.
+ * The "simple security icon" used on the Update and Maintenance screens.
  */
 import { View } from 'react-native';
 

@@ -12,11 +12,10 @@ import { Linking, Pressable, Text, View } from 'react-native';
 import { Card, Icon, IconTile, ScreenContainer, ScreenHeader, type IconName } from '@/components/ui';
 import { Links } from '@/constants/links';
 import { PLACEHOLDER_GRIEVANCE_OFFICER as OFFICER, PLACEHOLDER_SUPPORT as SUPPORT } from '@/features/profile/placeholderData';
-import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
 
-// Account screens are hidden in live mode (no profile endpoint) — retained for mock mode.
-const SHOW_ACCOUNT = showUnbackedScreens();
+// Account screens are hidden in all modes (Profile removed) — retained but unreachable.
+const SHOW_ACCOUNT = false;
 
 const FAQ: { q: string; a: string }[] = [
   {

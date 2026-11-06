@@ -1,6 +1,6 @@
 /**
  * S10: Delete my account — PRD 8.10. Three calm steps in one screen:
- *   review (what happens) -> verify (biometrics or OTP) -> request received.
+ *   review (what happens) -> verify (OTP) -> request received.
  * Deleting the app profile never cancels loans; records are kept as the law requires.
  *
  * TODO (M-09):
@@ -9,10 +9,9 @@
  *  - strings to i18n
  */
 import * as Clipboard from 'expo-clipboard';
-import * as LocalAuthentication from 'expo-local-authentication';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import {
   BottomSheet,
@@ -33,25 +32,22 @@ import { useSession } from '@/features/auth/session';
 import { PLACEHOLDER_LOANS, summarize } from '@/features/loans/placeholderData';
 import { formatDate } from '@/features/loans/format';
 import { PLACEHOLDER_GRIEVANCE_OFFICER as OFFICER, PLACEHOLDER_LENDER } from '@/features/profile/placeholderData';
-import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
 
 type Step = 'review' | 'verify' | 'done';
 
 const RESEND_SECONDS = 30;
 
-// Account screens are hidden in live mode (no profile endpoint) — retained for mock mode.
-const SHOW_ACCOUNT = showUnbackedScreens();
+// Account screens are hidden in all modes (Profile removed) — retained but unreachable.
+const SHOW_ACCOUNT = false;
 
 export default function DeleteAccountScreen() {
   const theme = useAppTheme();
   const { mobile, logout } = useSession();
   const [step, setStep] = useState<Step>('review');
   const [understood, setUnderstood] = useState(false);
-  const [useOtp, setUseOtp] = useState(false);
   const [otp, setOtp] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
-  const [busy, setBusy] = useState(false);
   const [ack, setAck] = useState<{ number: string; when: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [officerOpen, setOfficerOpen] = useState(false);
@@ -59,34 +55,16 @@ export default function DeleteAccountScreen() {
   const activeLoanCount = summarize(PLACEHOLDER_LOANS).activeLoans.length;
 
   useEffect(() => {
-    if (!useOtp || secondsLeft <= 0) return;
+    if (step !== 'verify' || secondsLeft <= 0) return;
     const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearTimeout(id);
-  }, [useOtp, secondsLeft]);
+  }, [step, secondsLeft]);
 
   if (!SHOW_ACCOUNT) return <Redirect href="/loans" />;
 
   function keepAccount() {
     if (router.canGoBack()) router.back();
     else router.replace('/account');
-  }
-
-  async function verifyWithBiometrics() {
-    setBusy(true);
-    try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const enrolled = hasHardware && (await LocalAuthentication.isEnrolledAsync());
-      if (!enrolled) {
-        Alert.alert('Biometrics not available', 'Please verify with an OTP instead.');
-        return;
-      }
-      const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Confirm account deletion' });
-      if (result.success) submitRequest();
-    } catch {
-      Alert.alert('Biometrics not available', 'Please verify with an OTP instead.');
-    } finally {
-      setBusy(false);
-    }
   }
 
   function submitRequest() {
@@ -196,7 +174,7 @@ export default function DeleteAccountScreen() {
   if (step === 'verify') {
     return (
       <ScreenContainer tone="canvas">
-        <ScreenHeader title="Delete Account" onBack={() => (useOtp ? setUseOtp(false) : setStep('review'))} />
+        <ScreenHeader title="Delete Account" onBack={() => setStep('review')} />
         <StepBar label="Step 2 of 2" trailing="Verify it's you" ratio={1} />
 
         <View style={{ gap: theme.spacing.sm }}>
@@ -204,45 +182,34 @@ export default function DeleteAccountScreen() {
             Verify it&apos;s you
           </Text>
           <Text style={bodyText}>
-            {useOtp
-              ? `Enter the 6-digit code sent to ${mobile ? maskMobile(mobile) : '+91 98XXXXX002'}.`
-              : 'Confirm with your device, or use a one-time code sent by SMS.'}
+            {`Enter the 6-digit code sent to ${mobile ? maskMobile(mobile) : '+91 98XXXXX002'}.`}
           </Text>
         </View>
 
-        {useOtp ? (
-          <>
-            <OtpInput value={otp} onChange={setOtp} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                <Icon name="time-outline" size={20} color="textSecondary" />
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
-                  {secondsLeft > 0 ? `Resend code in 00:${String(secondsLeft).padStart(2, '0')}` : 'You can request a new code'}
-                </Text>
-              </View>
-              <Button
-                label="Resend"
-                variant="ghost"
-                disabled={secondsLeft > 0}
-                onPress={() => {
-                  setOtp('');
-                  setSecondsLeft(RESEND_SECONDS);
-                }}
-              />
-            </View>
-            <Button
-              label="Confirm deletion request"
-              variant="danger"
-              disabled={otp.length !== 6}
-              onPress={submitRequest}
-            />
-          </>
-        ) : (
-          <View style={{ gap: theme.spacing.md }}>
-            <Button label="Use biometrics" leftIcon="finger-print" onPress={verifyWithBiometrics} loading={busy} />
-            <Button label="Use OTP instead" variant="secondary" leftIcon="chatbubble-ellipses-outline" onPress={() => { setUseOtp(true); setSecondsLeft(RESEND_SECONDS); setOtp(''); }} disabled={busy} />
+        <OtpInput value={otp} onChange={setOtp} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+            <Icon name="time-outline" size={20} color="textSecondary" />
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
+              {secondsLeft > 0 ? `Resend code in 00:${String(secondsLeft).padStart(2, '0')}` : 'You can request a new code'}
+            </Text>
           </View>
-        )}
+          <Button
+            label="Resend"
+            variant="ghost"
+            disabled={secondsLeft > 0}
+            onPress={() => {
+              setOtp('');
+              setSecondsLeft(RESEND_SECONDS);
+            }}
+          />
+        </View>
+        <Button
+          label="Confirm deletion request"
+          variant="danger"
+          disabled={otp.length !== 6}
+          onPress={submitRequest}
+        />
 
         <Button label="Keep my account" variant="ghost" onPress={keepAccount} />
       </ScreenContainer>
@@ -320,7 +287,7 @@ export default function DeleteAccountScreen() {
       </Pressable>
 
       <View style={{ gap: theme.spacing.sm }}>
-        <Button label="Continue with deletion" variant="danger" rightIcon="arrow-forward" disabled={!understood} onPress={() => setStep('verify')} />
+        <Button label="Continue with deletion" variant="danger" rightIcon="arrow-forward" disabled={!understood} onPress={() => { setOtp(''); setSecondsLeft(RESEND_SECONDS); setStep('verify'); }} />
         <Button label="Keep my account" variant="secondary" onPress={keepAccount} />
       </View>
 
