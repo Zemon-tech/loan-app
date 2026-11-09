@@ -230,7 +230,7 @@ export default function DeleteAccountScreen() {
           Delete your account
         </Text>
         <Text style={[bodyText, { textAlign: 'center' }]}>
-          Please review what happens when you request account deletion from Loan Tracker.
+          Please review what happens when you request account deletion from ALANG CREDITS.
         </Text>
       </View>
 

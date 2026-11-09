@@ -108,7 +108,7 @@ export default function SettingsScreen() {
 
       <View style={{ alignItems: 'center', gap: 2 }}>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold, letterSpacing: 0.6, textTransform: 'uppercase' }}>
-          Loan Tracker v{version}
+          ALANG CREDITS v{version}
         </Text>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1 }}>
           Read-only client {'\u2022'} No payments in this app

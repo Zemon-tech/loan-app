@@ -1,13 +1,10 @@
 import { Redirect, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandMark, Pill, ScreenContainer } from '@/components/ui';
 import { apiMode } from '@/features/api/config';
+import { SplashView } from '@/features/boot/components/SplashView';
 import { fetchBootConfig } from '@/features/boot/bootConfig';
 import { useSession } from '@/features/auth/session';
-import { useAppTheme } from '@/hooks/use-theme';
 
 /** Minimum time the splash stays visible so it never flashes. */
 const MIN_SPLASH_MS = 1200;
@@ -21,8 +18,6 @@ const MIN_SPLASH_MS = 1200;
  * a destination. Mock mode keeps the EXPO_PUBLIC_MOCK_BOOT-driven maintenance/update previews.
  */
 export default function SplashScreen() {
-  const theme = useAppTheme();
-  const insets = useSafeAreaInsets();
   const { isLoggedIn, isBootstrapping } = useSession();
   const [destination, setDestination] = useState<Href | null>(null);
 
@@ -58,40 +53,5 @@ export default function SplashScreen() {
   // <Redirect> (not router.replace in an effect) avoids an unhandled GO_BACK on the first screen.
   if (destination) return <Redirect href={destination} />;
 
-  return (
-    <ScreenContainer tone="canvas" scroll={false} contentStyle={{ justifyContent: 'center' }}>
-      <View
-        style={{ alignItems: 'center', gap: theme.spacing.lg }}
-        accessible
-        accessibilityLabel="Loan Tracker. Securing your session."
-        accessibilityLiveRegion="polite"
-      >
-        <BrandMark size={96} verified />
-        <View style={{ alignItems: 'center', gap: theme.spacing.xs }}>
-          <Text
-            style={{
-              color: theme.colors.textPrimary,
-              fontSize: theme.typography.size.heading,
-              fontWeight: theme.typography.weight.bold,
-            }}
-          >
-            Loan Tracker
-          </Text>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
-            Your Calm Financial Ledger
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-          <ActivityIndicator size="small" color={theme.colors.primary} />
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-            Securing your session
-          </Text>
-        </View>
-      </View>
-
-      <View style={{ position: 'absolute', bottom: insets.bottom + theme.spacing.xl, alignSelf: 'center' }}>
-        <Pill icon="lock-closed-outline" label="Protected by 256-bit bank-grade encryption" background="card" />
-      </View>
-    </ScreenContainer>
-  );
+  return <SplashView />;
 }

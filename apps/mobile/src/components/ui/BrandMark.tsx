@@ -1,9 +1,10 @@
 /**
- * BrandMark — the Loan Tracker app mark (rounded blue tile with a ledger glyph).
+ * BrandMark — the ALANG CREDITS logo (assets/images/logo.png) in a rounded tile.
  * `verified` adds the small green status dot used on splash / login.
  */
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 
+import { COMPANY_SHORT_NAME } from '@/constants/brand';
 import { useAppTheme } from '@/hooks/use-theme';
 
 import { Icon } from './Icon';
@@ -13,6 +14,8 @@ export interface BrandMarkProps {
   verified?: boolean;
 }
 
+const logo = require('../../../assets/images/logo.png');
+
 export function BrandMark({ size = 56, verified = false }: BrandMarkProps) {
   const theme = useAppTheme();
   const dot = Math.round(size * 0.3);
@@ -21,17 +24,14 @@ export function BrandMark({ size = 56, verified = false }: BrandMarkProps) {
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel="Loan Tracker logo"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: Math.round(size * 0.27),
-        backgroundColor: theme.colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
+      accessibilityLabel={`${COMPANY_SHORT_NAME} logo`}
+      style={{ width: size, height: size }}
     >
-      <Icon name="document-text-outline" size={Math.round(size * 0.52)} color="onPrimary" />
+      <Image
+        source={logo}
+        resizeMode="cover"
+        style={{ width: size, height: size, borderRadius: Math.round(size * 0.27) }}
+      />
       {verified ? (
         <View
           style={{

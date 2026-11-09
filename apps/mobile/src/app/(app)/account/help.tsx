@@ -177,7 +177,7 @@ export default function HelpScreen() {
           </Text>
         </View>
         <Text style={[caption, { textAlign: 'center' }]}>
-          Loan Tracker does not process payments. No financial transactions are started from this app.
+          ALANG CREDITS does not process payments. No financial transactions are started from this app.
         </Text>
       </View>
     </ScreenContainer>

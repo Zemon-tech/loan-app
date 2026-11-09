@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { BrandMark, Button, Icon, ScreenContainer } from '@/components/ui';
+import { COMPANY_NAME } from '@/constants/brand';
 import { apiMode } from '@/features/api/config';
 import * as endpoints from '@/features/api/endpoints';
 import { friendlyMessage } from '@/features/api/errors';
@@ -62,10 +63,24 @@ export default function LoginScreen() {
   const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption };
 
   return (
-    <ScreenContainer tone="canvas" contentStyle={{ justifyContent: 'center' }}>
-      <View style={{ gap: theme.spacing.lg }}>
-        <BrandMark size={60} verified />
+    <ScreenContainer tone="canvas" contentStyle={{ justifyContent: 'space-between' }}>
+      <View style={{ alignItems: 'center', gap: theme.spacing.md, paddingTop: theme.spacing.xl }}>
+        <BrandMark size={120} />
+        <Text
+          accessibilityRole="header"
+          style={{
+            color: theme.colors.textPrimary,
+            fontSize: theme.typography.size.subtitle,
+            fontWeight: theme.typography.weight.bold,
+            letterSpacing: 1,
+            textAlign: 'center',
+          }}
+        >
+          {COMPANY_NAME}
+        </Text>
+      </View>
 
+      <View style={{ gap: theme.spacing.lg }}>
         <View style={{ gap: theme.spacing.sm }}>
           <Text
             accessibilityRole="header"
@@ -75,7 +90,7 @@ export default function LoginScreen() {
               fontWeight: theme.typography.weight.bold,
             }}
           >
-            Welcome back
+            Welcome
           </Text>
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 }}>
             Enter your registered mobile number to view your loan records and repayment statements.

@@ -91,7 +91,7 @@ function AppBar() {
         accessibilityRole="header"
         style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.title, fontWeight: theme.typography.weight.bold }}
       >
-        Loan Tracker
+        ALANG CREDITS
       </Text>
     </View>
   );

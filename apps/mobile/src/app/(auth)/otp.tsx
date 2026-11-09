@@ -204,7 +204,6 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
           <OtpInput
             value={otp}
             onChange={onOtpChange}
-            onComplete={() => void submitVerify()}
             hasError={message !== null}
             autoFocus
           />
@@ -463,7 +462,6 @@ function MockOtp({ mobile }: { mobile: string | null }) {
         <OtpInput
           value={otp}
           onChange={onChange}
-          onComplete={(code) => onVerify(code)}
           hasError={mode === 'invalid' || locked}
           disabled={locked}
           autoFocus={!locked}

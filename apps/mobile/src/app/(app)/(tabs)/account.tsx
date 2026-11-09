@@ -48,7 +48,7 @@ export default function ProfileScreen() {
         <BrandMark size={36} />
         <View>
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold, letterSpacing: 0.6 }}>
-            LOAN TRACKER
+            ALANG CREDITS
           </Text>
           <Text
             accessibilityRole="header"
@@ -200,7 +200,7 @@ export default function ProfileScreen() {
       {/* Log out */}
       <PressableScale
         accessibilityRole="button"
-        accessibilityLabel="Log out of Loan Tracker"
+        accessibilityLabel="Log out of ALANG CREDITS"
         onPress={() => setLogoutOpen(true)}
         haptic
         style={{
@@ -229,7 +229,7 @@ export default function ProfileScreen() {
             lineHeight: 22,
           }}
         >
-          Log out of Loan Tracker
+          Log out of ALANG CREDITS
         </Text>
       </PressableScale>
 
@@ -241,7 +241,7 @@ export default function ProfileScreen() {
           </Text>
         </View>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1 }}>
-          Loan Tracker App v{version}
+          ALANG CREDITS App v{version}
         </Text>
       </View>
 

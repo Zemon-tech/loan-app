@@ -54,7 +54,7 @@ export const PLACEHOLDER_LEGAL_DOCUMENTS: LegalDocument[] = [
   {
     id: 'terms',
     title: 'Terms & Conditions',
-    description: 'Terms governing use of the Loan Tracker informational application.',
+    description: 'Terms governing use of the ALANG CREDITS informational application.',
     meta: 'Updated 15 August 2025 \u2022 v2.0',
     footnote: 'Opens in the in-app browser',
     icon: 'document-text-outline',
