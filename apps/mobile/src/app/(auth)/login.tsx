@@ -63,7 +63,7 @@ export default function LoginScreen() {
   const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption };
 
   return (
-    <ScreenContainer tone="canvas" contentStyle={{ justifyContent: 'space-between' }}>
+    <ScreenContainer tone="canvas" scrollToEndOnKeyboard contentStyle={{ justifyContent: 'space-between' }}>
       <View style={{ alignItems: 'center', gap: theme.spacing.md, paddingTop: theme.spacing.xl }}>
         <BrandMark size={120} />
         <Text

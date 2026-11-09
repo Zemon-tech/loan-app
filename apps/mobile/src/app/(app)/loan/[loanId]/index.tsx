@@ -152,6 +152,7 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
           accessibilityLabel={`${formatPaise(vm.overdueAmountPaise)} overdue`}
           style={{
             flexDirection: 'row',
+            alignItems: 'center',
             gap: theme.spacing.md,
             padding: theme.spacing.lg,
             borderRadius: theme.radius.lg,
@@ -174,12 +175,6 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
             <Text style={{ color: theme.colors.danger, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
               {formatPaise(vm.overdueAmountPaise)} overdue
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-              <Icon name="information-circle-outline" size={14} color="textSecondary" />
-              <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1 }}>
-                Informational record only. Non-transactional overview.
-              </Text>
-            </View>
           </View>
         </View>
       ) : null}

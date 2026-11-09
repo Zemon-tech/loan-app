@@ -55,6 +55,39 @@ function formatCountdown(total: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+/**
+ * Resend countdown + button. The label sits in a flexible, wrapping column and the button is
+ * content-sized (`fullWidth={false}`), so swapping "Resend code in 00:30" for "You can request a
+ * new code" can never push the button off-screen or against the screen edge.
+ */
+function ResendRow({
+  canResend,
+  secondsLeft,
+  onResend,
+}: {
+  canResend: boolean;
+  secondsLeft: number;
+  onResend: () => void;
+}) {
+  const theme = useAppTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+        <Icon name="time-outline" size={20} color="textSecondary" />
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{ flexShrink: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}
+        >
+          {canResend ? 'You can request a new code' : 'Resend code in '}
+          {canResend ? null : (
+            <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.bold }}>{formatCountdown(secondsLeft)}</Text>
+          )}
+        </Text>
+      </View>
+      <Button label="Resend OTP" variant="ghost" fullWidth={false} onPress={onResend} disabled={!canResend} />
+    </View>
+  );
+}
 export default function OtpScreen() {
   useSecureScreen();
   const { mobile } = useSession();
@@ -167,6 +200,7 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
   return (
     <ScreenContainer
       tone="canvas"
+      scrollToEndOnKeyboard
       header={<BrandHeader title="Verify number" showBack />}
       contentStyle={{ justifyContent: 'center' }}
     >
@@ -214,18 +248,7 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
             </View>
           ) : null}
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-              <Icon name="time-outline" size={20} color="textSecondary" />
-              <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
-                {canResend ? 'You can request a new code' : 'Resend code in '}
-                {canResend ? null : (
-                  <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.bold }}>{formatCountdown(secondsLeft)}</Text>
-                )}
-              </Text>
-            </View>
-            <Button label="Resend OTP" variant="ghost" onPress={onResend} disabled={!canResend} />
-          </View>
+          <ResendRow canResend={canResend} secondsLeft={secondsLeft} onResend={onResend} />
 
           <Button label="Verify & Proceed" rightIcon="arrow-forward" onPress={() => void submitVerify()} disabled={!canVerify} loading={verifying} />
 
@@ -394,6 +417,7 @@ function MockOtp({ mobile }: { mobile: string | null }) {
   return (
     <ScreenContainer
       tone="canvas"
+      scrollToEndOnKeyboard
       header={<BrandHeader title="Verify number" showBack />}
       contentStyle={{ justifyContent: 'center' }}
     >
@@ -503,18 +527,7 @@ function MockOtp({ mobile }: { mobile: string | null }) {
 
       {!locked ? (
         <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-              <Icon name="time-outline" size={20} color="textSecondary" />
-              <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}>
-                {canResend ? 'You can request a new code' : 'Resend code in '}
-                {canResend ? null : (
-                  <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.bold }}>{formatCountdown(secondsLeft)}</Text>
-                )}
-              </Text>
-            </View>
-            <Button label="Resend OTP" variant="ghost" onPress={onResend} disabled={!canResend} />
-          </View>
+          <ResendRow canResend={canResend} secondsLeft={secondsLeft} onResend={onResend} />
 
           {mode === 'expired' ? (
             <Button label="Send a new code" leftIcon="refresh" onPress={onResend} />

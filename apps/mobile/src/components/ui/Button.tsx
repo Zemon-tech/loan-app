@@ -38,6 +38,8 @@ export interface ButtonProps {
   rightIcon?: IconName;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  /** Stretch to the parent width (default). Set false for inline buttons that sit in a row. */
+  fullWidth?: boolean;
 }
 
 export function Button({
@@ -50,6 +52,7 @@ export function Button({
   rightIcon,
   style,
   accessibilityLabel,
+  fullWidth = true,
 }: ButtonProps) {
   const theme = useAppTheme();
   const reduceMotion = useReducedMotion();
@@ -95,7 +98,7 @@ export function Button({
   }
 
   return (
-    <Animated.View style={[{ width: '100%' }, animatedStyle, style]}>
+    <Animated.View style={[fullWidth ? { width: '100%' } : { flexShrink: 0 }, animatedStyle, style]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? label}
@@ -106,6 +109,7 @@ export function Button({
         onPress={handlePress}
         style={({ pressed }) => [
           styles.base,
+          fullWidth ? { width: '100%' } : null,
           {
             backgroundColor: bg,
             borderColor: outlined ? theme.colors.border : 'transparent',
@@ -143,7 +147,6 @@ const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
   },
   content: {
     flexDirection: 'row',
