@@ -7,7 +7,9 @@
  *   - Reads the body text once, then parses JSON DEFENSIVELY (never throws out of the client).
  *   - Classifies by HTTP STATUS, not body shape.
  *   - On 401 + `Token-Expired: true` + auth + not already a retry -> single-flight refresh, then
- *     retry the original request EXACTLY ONCE. Any other 401 -> UNAUTHORIZED + emitSessionExpired.
+ *     retry the original request EXACTLY ONCE. Any other 401 -> UNAUTHORIZED, plus
+ *     emitSessionExpired only if a bearer token was actually sent (a token-less request proves
+ *     nothing about the session).
  *   - 429 is NEVER auto-retried here (carries Retry-After); 400/403/404/5xx/network/timeout mapped.
  *
  * NO sensitive logging anywhere: no tokens, OTPs, mobile numbers, DOB, loan fields, URLs, or
@@ -52,9 +54,13 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
+  let sentToken = false;
   if (opts.auth) {
     const token = getAccessToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+      sentToken = true;
+    }
   }
 
   const controller = new AbortController();
@@ -101,8 +107,9 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
       }
       return request<T>(path, { ...opts, _isRetry: true }); // retry EXACTLY once
     }
-    // Any other 401 (missing token, invalid_otp, retry already attempted).
-    if (opts.auth) emitSessionExpired();
+    // Any other 401 (retry already attempted, token rejected). Only end the session when a token
+    // was actually sent: a request that went out with no token says nothing about the session.
+    if (opts.auth && sentToken) emitSessionExpired();
     return fail('UNAUTHORIZED', status);
   }
 

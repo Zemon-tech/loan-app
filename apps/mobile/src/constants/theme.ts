@@ -37,43 +37,59 @@ export const Fonts = Platform.select({
 // Never hardcode a colour or size in a component; always reference a token.
 // ============================================================================
 
-/** Semantic colour roles (11 core + 6 surface tints), light + dark. Follows the system setting. */
+/**
+ * Brand palette (ink black / deep space blue / blue slate / dusty denim / eggshell).
+ * Raw swatches only — components must use the semantic roles in `AppColors`, never these.
+ */
+const Palette = {
+  ink: { 500: '#0d1321' },
+  deepSpace: { 400: '#172436', 500: '#1d2d44' },
+  slate: { 300: '#253746', 500: '#3e5c76', 700: '#7d9eba' },
+  denim: { 300: '#40536b', 600: '#8fa2bc', 700: '#abb9cd', 800: '#c7d1dd', 900: '#e3e8ee' },
+  eggshell: { 500: '#f0ebd8', 700: '#f6f2e7', 800: '#f9f7ef', 900: '#fcfbf7' },
+} as const;
+
+/**
+ * Semantic colour roles (11 core + 6 surface tints), light + dark. Follows the system setting.
+ * Status colours (success / warning / danger + soft tints) are intentionally NOT from the brand
+ * palette: they must stay recognisable green / amber / red (always paired with a label + icon).
+ */
 export const AppColors = {
   light: {
-    primary: '#1E63E9',
-    onPrimary: '#FFFFFF',
-    background: '#FFFFFF',
-    surface: '#F6F7F9',
-    textPrimary: '#111827',
-    textSecondary: '#60646C',
-    border: '#E0E1E6',
+    primary: Palette.deepSpace[500], // buttons, brand mark, selected states, links
+    onPrimary: Palette.eggshell[500], // text/icons on primary (≈11.6:1)
+    background: Palette.eggshell[800], // default screen tone; also inverse text on primary chips
+    surface: Palette.eggshell[500], // neutral blocks (e.g. collapsed closed-loans)
+    textPrimary: Palette.ink[500],
+    textSecondary: Palette.denim[300], // ≥6.6:1 on every light surface
+    border: Palette.denim[800],
     success: '#16A34A',
     warning: '#D97706',
     danger: '#DC2626',
-    info: '#2563EB',
-    // Auth / entry surfaces (mockups): lavender page tint, white card, soft tints.
-    canvas: '#F9F9FF',
-    card: '#FFFFFF',
-    primarySoft: '#E8EEFF',
+    info: Palette.slate[500],
+    // Auth / entry surfaces: warm eggshell page tint, lighter card, cool soft tint.
+    canvas: Palette.eggshell[700],
+    card: Palette.eggshell[900],
+    primarySoft: Palette.denim[900], // icon tiles, stat boxes, selected rows
     successSoft: '#DCFCE7',
     dangerSoft: '#FDECEC',
     warningSoft: '#FEF3C7',
   },
   dark: {
-    primary: '#4F8CFF',
-    onPrimary: '#06121F',
-    background: '#000000',
-    surface: '#16181B',
-    textPrimary: '#F3F4F6',
-    textSecondary: '#B0B4BA',
-    border: '#2E3135',
+    primary: Palette.denim[600],
+    onPrimary: Palette.ink[500], // ≈7:1 on primary
+    background: Palette.ink[500],
+    surface: Palette.deepSpace[400],
+    textPrimary: Palette.eggshell[500],
+    textSecondary: Palette.denim[700],
+    border: Palette.slate[300],
     success: '#22C55E',
     warning: '#F59E0B',
     danger: '#EF4444',
-    info: '#60A5FA',
-    canvas: '#000000',
-    card: '#16181B',
-    primarySoft: '#16233F',
+    info: Palette.slate[700],
+    canvas: Palette.ink[500],
+    card: Palette.deepSpace[400],
+    primarySoft: Palette.deepSpace[500],
     successSoft: '#0F2A1A',
     dangerSoft: '#2A1416',
     warningSoft: '#2B2110',

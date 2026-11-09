@@ -12,6 +12,7 @@ import {
 } from '@tanstack/react-query';
 import * as Network from 'expo-network';
 
+import { apiMode } from './config';
 import { getLoan, getLoans } from './endpoints';
 import { isSessionExpired } from './errors';
 import type { LoanDetailVM, LoanListItemVM, QueryState } from './vm';
@@ -34,15 +35,21 @@ async function unwrapLoan(loanId: string): Promise<LoanDetailVM> {
   throw res.error;
 }
 
+/**
+ * The data-source seam always calls these hooks (rules of hooks), so they must be inert in mock
+ * mode: no network request may ever leave the app when `EXPO_PUBLIC_API_MODE=mock`.
+ */
+const isLive = () => apiMode() === 'live';
+
 export function useLoansQuery(): UseQueryResult<LoanListItemVM[]> {
-  return useQuery({ queryKey: loanKeys.all, queryFn: unwrapLoans });
+  return useQuery({ queryKey: loanKeys.all, queryFn: unwrapLoans, enabled: isLive() });
 }
 
 export function useLoanQuery(loanId: string): UseQueryResult<LoanDetailVM> {
   return useQuery({
     queryKey: loanKeys.detail(loanId),
     queryFn: () => unwrapLoan(loanId),
-    enabled: loanId.length > 0,
+    enabled: isLive() && loanId.length > 0,
   });
 }
 
