@@ -18,7 +18,7 @@
 import { baseUrl } from './config';
 import { getDeviceId } from './deviceId';
 import type { ApiError, ApiResult } from './errors';
-import { refreshOnce, type RefreshTokens } from './refresh';
+import { RefreshError, refreshOnce, type RefreshTokens } from './refresh';
 import { emitSessionExpired } from './sessionEvents';
 import { getAccessToken, loadRefreshToken } from './tokenStore';
 import type { AuthSuccess } from './wireTypes';
@@ -49,6 +49,19 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   const origin = baseUrl();
   const url = `${origin}${path}`;
   if (!url.startsWith('https:')) return fail('FORBIDDEN_HTTP');
+
+  // Cold start: the access token is memory-only, so an authed request with none (and a stored
+  // refresh token) must refresh FIRST. Single-flight, so concurrent queries share one refresh.
+  if (opts.auth && !getAccessToken()) {
+    const outcome = await refreshOnce(fetchRefreshTokens);
+    if (!outcome.ok) {
+      if (outcome.reason === 'rejected') {
+        emitSessionExpired();
+        return fail('UNAUTHORIZED', 401);
+      }
+      return fail('NETWORK'); // session not proven dead: let the user retry
+    }
+  }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -102,8 +115,11 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
     if (opts.auth && tokenExpired && !opts._isRetry) {
       const outcome = await refreshOnce(fetchRefreshTokens);
       if (!outcome.ok) {
-        emitSessionExpired();
-        return fail('UNAUTHORIZED', status);
+        if (outcome.reason === 'rejected') {
+          emitSessionExpired();
+          return fail('UNAUTHORIZED', status);
+        }
+        return fail('NETWORK'); // refresh could not complete (offline / 5xx): keep the session
       }
       return request<T>(path, { ...opts, _isRetry: true }); // retry EXACTLY once
     }
@@ -126,9 +142,9 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
  * endpoint DIRECTLY (not via request()) so its own 401 is a hard failure, never a nested
  * refresh. Throws on any non-2xx / network / missing-token so refreshOnce() clears tokens.
  */
-async function fetchRefreshTokens(): Promise<RefreshTokens> {
+export async function fetchRefreshTokens(): Promise<RefreshTokens> {
   const refreshToken = await loadRefreshToken();
-  if (!refreshToken) throw new Error('no-refresh-token');
+  if (!refreshToken) throw new RefreshError('rejected'); // nothing to refresh with
   const deviceId = await getDeviceId();
 
   const origin = baseUrl();
@@ -143,23 +159,30 @@ async function fetchRefreshTokens(): Promise<RefreshTokens> {
       body: JSON.stringify({ refreshToken, deviceId }),
       signal: controller.signal,
     });
+  } catch {
+    throw new RefreshError('transient'); // offline / timeout
   } finally {
     clearTimeout(timer);
   }
 
-  if (res.status < 200 || res.status >= 300) throw new Error('refresh-failed');
+  if (res.status < 200 || res.status >= 300) {
+    // 4xx (except 429) = the server refused this refresh token -> session over.
+    // 429 / 5xx = transient; keep the token and retry later.
+    const definite = res.status >= 400 && res.status < 500 && res.status !== 429 && res.status !== 408;
+    throw new RefreshError(definite ? 'rejected' : 'transient');
+  }
 
   let body: unknown;
   try {
     const text = await res.text();
     body = text ? JSON.parse(text) : undefined;
   } catch {
-    throw new Error('refresh-bad-body');
+    throw new RefreshError('transient');
   }
 
   const auth = body as Partial<AuthSuccess> | undefined;
   if (!auth || auth.status !== 'authenticated' || !auth.accessToken || !auth.refreshToken) {
-    throw new Error('refresh-bad-shape');
+    throw new RefreshError('transient');
   }
   return { accessToken: auth.accessToken, refreshToken: auth.refreshToken };
 }

@@ -3,7 +3,7 @@
  *
  * LIVE mode (EXPO_PUBLIC_API_MODE=live):
  *   - POST /api/v1/auth/otp/verify with { mobileNumber, otp, deviceId }.
- *   - `authenticated` -> completeLogin(tokens) -> /loans.
+ *   - `authenticated` -> await completeLogin(tokens) -> route guards -> /loans.
  *   - `date_of_birth_required` -> a DOB sub-step (three DD/MM/YYYY numeric fields), re-verify
  *     with the same OTP + dateOfBirth.
  *   - Wrong/expired/used OTP, wrong DOB, and the 15-minute server lock all collapse into ONE
@@ -106,12 +106,12 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
     }
 
     if (res.data.status === 'authenticated') {
-      completeLogin({
+      // Resolves once tokens are saved; the route guards then move the user to /loans.
+      await completeLogin({
         accessToken: res.data.accessToken,
         refreshToken: res.data.refreshToken,
         expiresInSeconds: res.data.expiresInSeconds,
       });
-      router.replace('/loans');
       return;
     }
 
@@ -378,8 +378,7 @@ function MockOtp({ mobile }: { mobile: string | null }) {
       return;
     }
     setVerifying(true);
-    completeLogin();
-    router.replace('/loans');
+    void completeLogin(); // route guards move the user to /loans
   }
 
   function onResend() {

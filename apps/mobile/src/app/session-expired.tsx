@@ -1,26 +1,30 @@
 /**
  * Session expired — blocking screen shown when the server says the session is no longer valid.
  * Signing in again needs an OTP.
- *
- * TODO (M-03): trigger from the API client on 401 after a failed single-flight refresh.
+ * Shown after the API client's single-flight refresh is rejected by the server.
  */
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button, Card, Icon, IconTile, Pill, ScreenContainer } from '@/components/ui';
-import { maskMobileDots } from '@/features/auth/format';
 import { useSession } from '@/features/auth/session';
-import { PLACEHOLDER_CUSTOMER } from '@/features/loans/placeholderData';
 import { useAppTheme } from '@/hooks/use-theme';
 
 export default function SessionExpiredScreen() {
   const theme = useAppTheme();
-  const { mobile, logout } = useSession();
+  const { isLoggedIn, logout } = useSession();
+  const [leaving, setLeaving] = useState(false);
 
   function continueToLogin() {
     logout();
-    router.replace('/login');
+    setLeaving(true);
   }
+
+  // Navigate only once the signed-out state is in place, so the (auth) route guard allows it.
+  useEffect(() => {
+    if (leaving && !isLoggedIn) router.replace('/login');
+  }, [leaving, isLoggedIn]);
 
   return (
     <ScreenContainer tone="canvas" scroll={false} contentStyle={{ justifyContent: 'center' }}>
@@ -40,33 +44,6 @@ export default function SessionExpiredScreen() {
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24, textAlign: 'center' }}>
               For your privacy and security, you were signed out. Please log in again.
             </Text>
-          </View>
-
-          <View
-            style={{
-              alignSelf: 'stretch',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: theme.spacing.md,
-              padding: theme.spacing.md,
-              borderRadius: theme.radius.lg,
-              backgroundColor: theme.colors.primarySoft,
-            }}
-          >
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.card, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: theme.colors.primary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.bold }}>
-                {PLACEHOLDER_CUSTOMER.initials}
-              </Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1 }}>Registered borrower</Text>
-              <Text numberOfLines={1} style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.semibold }}>
-                {PLACEHOLDER_CUSTOMER.name}{' '}
-                <Text style={{ color: theme.colors.textSecondary, fontWeight: theme.typography.weight.regular, fontSize: theme.typography.size.caption }}>
-                  ({mobile ? maskMobileDots(mobile) : '+91 98\u2022\u2022\u2022\u2022\u2022002'})
-                </Text>
-              </Text>
-            </View>
           </View>
 
           <Button label="Continue to login" rightIcon="arrow-forward" onPress={continueToLogin} style={{ alignSelf: 'stretch' }} />

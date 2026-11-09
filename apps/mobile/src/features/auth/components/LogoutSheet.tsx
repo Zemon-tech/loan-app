@@ -3,7 +3,6 @@
  *
  * TODO (M-03): POST /v1/auth/logout; clear SecureStore, in-memory tokens and TanStack Query cache.
  */
-import { router } from 'expo-router';
 
 import { ConfirmSheet } from '@/components/ui';
 
@@ -14,8 +13,7 @@ export function LogoutSheet({ visible, onClose }: { visible: boolean; onClose: (
 
   function onConfirm() {
     onClose();
-    logout();
-    router.replace('/login');
+    logout(); // route guards send the user to /login
   }
 
   return (

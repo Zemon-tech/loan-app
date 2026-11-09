@@ -87,8 +87,7 @@ export default function DeleteAccountScreen() {
   }
 
   function finish() {
-    logout();
-    router.replace('/login');
+    logout(); // route guards send the user to /login
   }
 
   const bodyText = { color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 } as const;

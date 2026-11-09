@@ -1,19 +1,12 @@
-import { Redirect, Stack } from 'expo-router';
-
-import { useSession } from '@/features/auth/session';
+import { Stack } from 'expo-router';
 
 /**
  * Authenticated area Stack navigator.
  * Hosts the primary tab bar in `(tabs)` and pushes detail screens (`loan/[loanId]`, `account/*`)
  * with native slide-from-right transitions and swipe-to-dismiss gesture (sliding page right).
+ * Access is enforced by Stack.Protected in the root layout, not here.
  */
 export default function AppLayout() {
-  const { isLoggedIn } = useSession();
-
-  if (!isLoggedIn) {
-    return <Redirect href="/login" />;
-  }
-
   return (
     <Stack
       screenOptions={{
