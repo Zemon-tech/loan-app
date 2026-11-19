@@ -12,6 +12,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { formatINR as formatPaise } from '@app/shared';
+
 import { Icon, StateScroll, StateView } from '@/components/ui';
 import { formatDate, formatINR, formatMonthYear, monthKey } from '@/features/loans/format';
 import {
@@ -20,10 +22,11 @@ import {
   netCredit,
   signedAmount,
 } from '@/features/loans/components/TransactionSheet';
-import { findPlaceholderLoan, type Loan, type Transaction, type TransactionType } from '@/features/loans/placeholderData';
+import { useLoanData, useTransactionsData } from '@/features/api/dataSource';
+import type { LoanDetailVM, TransactionVM, TransactionsPageVM } from '@/features/api/vm';
+import type { Transaction, TransactionType } from '@/features/loans/placeholderData';
 import { HistorySkeleton } from '@/features/system/components/Skeletons';
 import { LoadErrorState, NoTransactionsState, SupportSheet } from '@/features/system/components/SystemStates';
-import { useMockQuery } from '@/features/system/mockQuery';
 import { useAppTheme } from '@/hooks/use-theme';
 
 type TypeFilter = 'ALL' | TransactionType;
@@ -40,21 +43,49 @@ function netLabel(n: number): string {
   return `Net: ${n < 0 ? '\u2212' : '+'}${formatINR(Math.abs(n))}`;
 }
 
+function vmToSheetTransaction(item: TransactionVM, index: number): Transaction {
+  let tType: TransactionType = 'ADJUSTMENT';
+  if (item.type.includes('payment') || item.type.includes('advance') || item.type.includes('repayment')) {
+    tType = 'PAYMENT';
+  } else if (item.type.includes('fee') || item.type.includes('interest') || item.type.includes('charge') || item.type.includes('disbursed')) {
+    tType = 'CHARGE';
+  } else if (item.type.includes('discount')) {
+    tType = 'DISCOUNT';
+  }
+
+  const dateObj = new Date(item.rawDate);
+
+  return {
+    id: `txn-${index}-${item.rawDate}`,
+    date: isNaN(dateObj.getTime()) ? new Date() : dateObj,
+    type: tType,
+    label: item.description,
+    mode: item.paymentMode === 'Cash' ? 'Cash' : 'Online',
+    modeDetail: item.channel ? `${item.paymentMode || 'Payment'} (${item.channel})` : item.paymentMode || undefined,
+    amount: item.amountPaise / 100,
+    referenceNo: item.paymentMode ? `${item.paymentMode}-${index + 1}` : undefined,
+  };
+}
+
 export default function HistoryScreen() {
   const { loanId } = useLocalSearchParams<{ loanId: string }>();
-  const load = useCallback(() => findPlaceholderLoan(loanId ?? ''), [loanId]);
-  const query = useMockQuery(`loan:${loanId}`, load);
+  const loanQuery = useLoanData(loanId ?? '');
+  const txnQuery = useTransactionsData(loanId ?? '');
 
-  if (query.status === 'session_expired') return <Redirect href="/session-expired" />;
-  if (query.status === 'loading') return <HistorySkeleton />;
-  if (query.status === 'error') {
+  if (txnQuery.status === 'session_expired' || loanQuery.status === 'session_expired') {
+    return <Redirect href="/session-expired" />;
+  }
+  if (txnQuery.status === 'loading' || loanQuery.status === 'loading') {
+    return <HistorySkeleton />;
+  }
+  if (txnQuery.status === 'error' || loanQuery.status === 'error') {
     return (
       <StateScroll>
-        <LoadErrorState onRetry={query.refetch} />
+        <LoadErrorState onRetry={() => { txnQuery.refetch(); loanQuery.refetch(); }} />
       </StateScroll>
     );
   }
-  if (!query.data) {
+  if (!txnQuery.data || !loanQuery.data) {
     return (
       <StateScroll>
         <StateView
@@ -65,8 +96,8 @@ export default function HistoryScreen() {
       </StateScroll>
     );
   }
-  if (query.data.transactions.length === 0) return <EmptyHistory />;
-  return <HistoryContent loan={query.data} />;
+  if (txnQuery.data.transactions.length === 0) return <EmptyHistory />;
+  return <HistoryContent loanVM={loanQuery.data} pageVM={txnQuery.data} />;
 }
 
 function EmptyHistory() {
@@ -86,15 +117,17 @@ function EmptyHistory() {
   );
 }
 
-function HistoryContent({ loan }: { loan: Loan }) {
+function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: TransactionsPageVM }) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<TypeFilter>('ALL');
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [open, setOpen] = useState(false);
 
+  // Convert VMs to SectionList format
   const { sections, total } = useMemo(() => {
-    const all = [...loan.transactions]
+    const sheetItems = pageVM.transactions.map((t, idx) => vmToSheetTransaction(t, idx));
+    const all = sheetItems
       .filter((t) => filter === 'ALL' || t.type === filter)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
     const map = new Map<number, { title: string; data: Transaction[] }>();
@@ -104,7 +137,7 @@ function HistoryContent({ loan }: { loan: Loan }) {
       map.get(k)!.data.push(t);
     }
     return { sections: [...map.values()], total: all.length };
-  }, [loan, filter]);
+  }, [pageVM, filter]);
 
   const keyExtractor = useCallback((t: Transaction) => t.id, []);
 
@@ -217,6 +250,49 @@ function HistoryContent({ loan }: { loan: Loan }) {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* Lifetime stats banner */}
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: theme.spacing.md,
+          paddingHorizontal: theme.spacing.lg,
+          paddingBottom: theme.spacing.md,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            padding: theme.spacing.md,
+            borderRadius: theme.radius.md,
+            backgroundColor: theme.colors.card,
+            gap: 2,
+          }}
+        >
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
+            TOTAL CREDITED
+          </Text>
+          <Text style={{ color: theme.colors.success, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
+            +{formatPaise(pageVM.totalCreditPaise)}
+          </Text>
+        </View>
+        <View
+          style={{
+            flex: 1,
+            padding: theme.spacing.md,
+            borderRadius: theme.radius.md,
+            backgroundColor: theme.colors.card,
+            gap: 2,
+          }}
+        >
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
+            TOTAL DEBITED
+          </Text>
+          <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
+            {formatPaise(pageVM.totalDebitPaise)}
+          </Text>
+        </View>
+      </View>
+
       {/* Filter ribbon */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: theme.spacing.sm }}>
         <ScrollView
@@ -297,7 +373,7 @@ function HistoryContent({ loan }: { loan: Loan }) {
       <TransactionSheet
         visible={open}
         transaction={selected}
-        accountNumber={loan.accountNumber}
+        accountNumber={loanVM.accountNumber}
         onClose={() => setOpen(false)}
       />
     </View>

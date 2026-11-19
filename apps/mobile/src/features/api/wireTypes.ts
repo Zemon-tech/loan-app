@@ -46,6 +46,49 @@ export interface LogoutResponse {
   status: 'logged_out';
 }
 
+export interface UserProfileWire {
+  name: string;
+  hasPhoto: boolean;
+}
+
+export interface LastPaymentWire {
+  amount: number;
+  date: string;
+}
+
+export interface DisbursalWire {
+  loanAmount: number;
+  serviceCharges: number;
+  verificationCharges: number;
+  advanceInstallment: number;
+  previousLoanAdjustment: number;
+  totalDeductions: number;
+  amountDisbursed: number;
+}
+
+export interface DuesWire {
+  installmentsDue: number;
+  lateFees: number;
+  overdueInterest: number;
+  recoveryVisitCharges: number;
+  discount: number;
+  totalDue: number;
+  installmentPayments: number;
+  advanceInstallment: number;
+  adjustments: number;
+  totalPaid: number;
+  overdueAmount: number;
+}
+
+export interface SettlementWire {
+  settlementDate: string;
+  settlementAmount: number;
+  paymentFrequency: string | null;
+  installmentAmount: number | null;
+  paidSinceSettlement: number;
+  balance: number;
+}
+
 export interface LoanWire {
   loanRef: string;
   accountNumber: string;
@@ -61,6 +104,36 @@ export interface LoanDetailWire extends LoanWire {
   paymentFrequency: string; // title-case label; normalized in the adapter
   financedAmount: number; // rupees
   totalPaid: number; // rupees
+  // Fields added on 2026-11-18:
+  loanDate?: string;
+  numberOfInstallments?: number;
+  weeklyOff?: string | null;
+  nextCollectionDate?: string | null;
+  installmentsOverdue?: number;
+  lastPayment?: LastPaymentWire | null;
+  disbursal?: DisbursalWire;
+  dues?: DuesWire;
+  settlement?: SettlementWire | null;
+}
+
+export interface TransactionItemWire {
+  date: string; // ISO-8601
+  type: string;
+  description: string;
+  direction: 'credit' | 'debit';
+  amount: number; // rupees
+  paymentMode?: string | null;
+  channel?: string | null;
+}
+
+export interface TransactionsResponseWire {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  totalCredit: number; // rupees
+  totalDebit: number; // rupees
+  transactions: TransactionItemWire[];
 }
 
 export interface LoansResponseWire {

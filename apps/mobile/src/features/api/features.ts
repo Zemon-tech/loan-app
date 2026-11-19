@@ -1,19 +1,27 @@
 /**
- * Feature flags derived from the API mode (FR-17, FR-0d).
+ * Feature flags for the app screens and cards.
  *
- * In live mode the unbacked screens (schedule, history, profile/account) and the unbacked
- * loan-detail cards are HIDDEN — the guide's wire contract has no source for them. In mock mode
- * every screen and card is shown so the prototype stays fully reviewable. The code is retained
- * in both modes; only visibility changes.
+ * All screens (Home, Profile, Loan Overview, Transactions History) and enriched loan-detail
+ * cards (Disbursal, Dues, Settlement, Last Payment) are now backed by the live partner API
+ * (as of the 2026-11-18 contract update).
  */
-import { apiMode } from './config';
 
-/** True when the schedule / history / profile screens should be reachable (mock only). */
+/** True when the schedule / history / profile screens should be reachable. */
 export function showUnbackedScreens(): boolean {
-  return apiMode() === 'mock';
+  return true;
 }
 
-/** True when the unbacked loan-detail cards/rows should render (mock only). */
+/** True when the enriched loan-detail cards/rows should render. */
 export function showUnbackedCards(): boolean {
-  return apiMode() === 'mock';
+  return true;
+}
+
+/** True when the Profile tab should render. */
+export function showProfileTab(): boolean {
+  return true;
+}
+
+/** True when the Transactions history segment should render. */
+export function showTransactions(): boolean {
+  return true;
 }

@@ -8,6 +8,50 @@
  */
 import type { IsoDate, LoanStatus, Paise, PayFrequency } from '@app/shared';
 
+export interface BorrowerProfileVM {
+  name: string;
+  hasPhoto: boolean;
+  initials: string;
+}
+
+export interface LastPaymentVM {
+  amountPaise: Paise;
+  date: IsoDate | null;
+}
+
+export interface LoanDisbursalVM {
+  loanAmountPaise: Paise;
+  serviceChargesPaise: Paise;
+  verificationChargesPaise: Paise;
+  advanceInstallmentPaise: Paise;
+  previousLoanAdjustmentPaise: Paise;
+  totalDeductionsPaise: Paise;
+  amountDisbursedPaise: Paise;
+}
+
+export interface LoanDuesVM {
+  installmentsDuePaise: Paise;
+  lateFeesPaise: Paise;
+  overdueInterestPaise: Paise;
+  recoveryVisitChargesPaise: Paise;
+  discountPaise: Paise;
+  totalDuePaise: Paise;
+  installmentPaymentsPaise: Paise;
+  advanceInstallmentPaise: Paise;
+  adjustmentsPaise: Paise;
+  totalPaidPaise: Paise;
+  overdueAmountPaise: Paise;
+}
+
+export interface LoanSettlementVM {
+  settlementDate: IsoDate | null;
+  settlementAmountPaise: Paise;
+  paymentFrequency: PayFrequency | null;
+  installmentAmountPaise: Paise | null;
+  paidSinceSettlementPaise: Paise;
+  balancePaise: Paise;
+}
+
 export interface LoanListItemVM {
   /** Opaque loanRef, assigned verbatim. Never parsed, never persisted across logins. */
   loanId: string;
@@ -20,11 +64,41 @@ export interface LoanListItemVM {
 }
 
 export interface LoanDetailVM extends LoanListItemVM {
+  startDate: IsoDate | null;
   loanDate: IsoDate | null;
   maturityDate: IsoDate | null;
   payFrequency: PayFrequency | null;
   principalPaise: Paise; // financedAmount
   totalPaidPaise: Paise;
+  numberOfInstallments: number | null;
+  weeklyOff: string | null;
+  nextCollectionDate: IsoDate | null;
+  installmentsOverdue: number | null;
+  lastPayment: LastPaymentVM | null;
+  disbursal: LoanDisbursalVM | null;
+  dues: LoanDuesVM | null;
+  settlement: LoanSettlementVM | null;
+}
+
+export interface TransactionVM {
+  date: IsoDate | null;
+  rawDate: string;
+  type: string;
+  description: string;
+  direction: 'credit' | 'debit';
+  amountPaise: Paise;
+  paymentMode: string | null;
+  channel: string | null;
+}
+
+export interface TransactionsPageVM {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  totalCreditPaise: Paise;
+  totalDebitPaise: Paise;
+  transactions: TransactionVM[];
 }
 
 export interface LoansSummaryVM {

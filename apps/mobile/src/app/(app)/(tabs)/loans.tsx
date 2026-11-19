@@ -9,7 +9,7 @@
  */
 import { Redirect, router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -23,7 +23,7 @@ import { formatINR } from '@app/shared';
 
 import { BrandMark, Card, Icon, IconTile, ScreenContainer } from '@/components/ui';
 import { buildLoansSummary } from '@/features/api/adapter';
-import { useLoansData } from '@/features/api/dataSource';
+import { useLoansData, usePhotoData, useProfileData } from '@/features/api/dataSource';
 import { showUnbackedScreens } from '@/features/api/features';
 import { useSecureScreen } from '@/features/security/useSecureScreen';
 import { HomeSkeleton } from '@/features/system/components/Skeletons';
@@ -99,6 +99,14 @@ function AppBar() {
 
 function HomeContent({ loans }: { loans: LoanListItemVM[] }) {
   const theme = useAppTheme();
+  const profileQuery = useProfileData();
+  const profile = profileQuery.status === 'success' ? profileQuery.data : null;
+  const photoQuery = usePhotoData(profile?.hasPhoto ?? false);
+  const photoUri = photoQuery.status === 'success' ? photoQuery.data : null;
+
+  const firstName = profile?.name ? profile.name.split(/\s+/)[0] : PLACEHOLDER_CUSTOMER.firstName;
+  const initials = profile?.initials || PLACEHOLDER_CUSTOMER.initials;
+
   const summary = useMemo(() => buildLoansSummary(loans), [loans]);
   const { activeLoans, closedLoans } = summary;
   const allClosed = activeLoans.length === 0;
@@ -124,8 +132,52 @@ function HomeContent({ loans }: { loans: LoanListItemVM[] }) {
           flex: 1,
         }}
       >
-        {SHOW_MOCK_EXTRAS ? `${greeting()}, ${PLACEHOLDER_CUSTOMER.firstName}` : greeting()}
+        {`${greeting()}, ${firstName}`}
       </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Go to Profile"
+        onPress={() => router.push('/account')}
+        style={({ pressed }) => ({
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
+        {photoUri ? (
+          <Image
+            source={{ uri: photoUri }}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              borderWidth: 1.5,
+              borderColor: theme.colors.primary,
+            }}
+          />
+        ) : (
+          <View
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: theme.colors.primarySoft,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1.5,
+              borderColor: theme.colors.primary,
+            }}
+          >
+            <Text
+              style={{
+                color: theme.colors.primary,
+                fontSize: theme.typography.size.caption,
+                fontWeight: theme.typography.weight.bold,
+              }}
+            >
+              {initials}
+            </Text>
+          </View>
+        )}
+      </Pressable>
     </View>
   );
 

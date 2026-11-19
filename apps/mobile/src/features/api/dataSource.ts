@@ -7,11 +7,29 @@
 import { useCallback } from 'react';
 
 import { apiMode } from './config';
-import { mockLoanToDetailVM, mockLoanToListItemVM } from './mockAdapter';
-import { toQueryState, useLoanQuery, useLoansQuery } from './queries';
-import type { LoanDetailVM, LoanListItemVM, QueryState } from './vm';
+import {
+  mockLoanToDetailVM,
+  mockLoanToListItemVM,
+  mockLoanTransactionsToPageVM,
+} from './mockAdapter';
+import {
+  toQueryState,
+  useLoanQuery,
+  useLoansQuery,
+  usePhotoQuery,
+  useProfileQuery,
+  useTransactionsQuery,
+} from './queries';
+import type {
+  BorrowerProfileVM,
+  LoanDetailVM,
+  LoanListItemVM,
+  QueryState,
+  TransactionsPageVM,
+} from './vm';
 import {
   findPlaceholderLoan,
+  PLACEHOLDER_CUSTOMER,
   PLACEHOLDER_LOANS,
 } from '@/features/loans/placeholderData';
 import { useMockQuery } from '@/features/system/mockQuery';
@@ -46,6 +64,49 @@ export function useLoanData(loanId: string): DataState<LoanDetailVM | null> {
     [loanId],
   );
   const mockQuery = useMockQuery<LoanDetailVM | null>(`loan:vm:${loanId}`, loadMock);
+
+  if (live) return toQueryState(liveQuery);
+  return mockQuery;
+}
+
+export function useProfileData(): DataState<BorrowerProfileVM> {
+  const live = apiMode() === 'live';
+  const liveQuery = useProfileQuery();
+
+  const loadMock = useCallback(
+    (): BorrowerProfileVM => ({
+      name: PLACEHOLDER_CUSTOMER.name,
+      hasPhoto: false,
+      initials: PLACEHOLDER_CUSTOMER.initials,
+    }),
+    [],
+  );
+  const mockQuery = useMockQuery<BorrowerProfileVM>('profile:vm', loadMock);
+
+  if (live) return toQueryState(liveQuery);
+  return mockQuery;
+}
+
+export function usePhotoData(hasPhoto = true): DataState<string | null> {
+  const live = apiMode() === 'live';
+  const liveQuery = usePhotoQuery(hasPhoto);
+
+  const loadMock = useCallback((): string | null => null, []);
+  const mockQuery = useMockQuery<string | null>('photo:vm', loadMock);
+
+  if (live) return toQueryState(liveQuery);
+  return mockQuery;
+}
+
+export function useTransactionsData(loanId: string, page = 1): DataState<TransactionsPageVM | null> {
+  const live = apiMode() === 'live';
+  const liveQuery = useTransactionsQuery(loanId, page);
+
+  const loadMock = useCallback((): TransactionsPageVM | null => {
+    const loan = findPlaceholderLoan(loanId);
+    return loan ? mockLoanTransactionsToPageVM(loan) : null;
+  }, [loanId]);
+  const mockQuery = useMockQuery<TransactionsPageVM | null>(`transactions:vm:${loanId}:${page}`, loadMock);
 
   if (live) return toQueryState(liveQuery);
   return mockQuery;

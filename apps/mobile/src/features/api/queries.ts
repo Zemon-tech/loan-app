@@ -13,13 +13,25 @@ import {
 import * as Network from 'expo-network';
 
 import { apiMode } from './config';
-import { getLoan, getLoans } from './endpoints';
+import { getLoan, getLoans, getPhoto, getProfile, getTransactions } from './endpoints';
 import { isSessionExpired } from './errors';
-import type { LoanDetailVM, LoanListItemVM, QueryState } from './vm';
+import type {
+  BorrowerProfileVM,
+  LoanDetailVM,
+  LoanListItemVM,
+  QueryState,
+  TransactionsPageVM,
+} from './vm';
 
 export const loanKeys = {
   all: ['loans'] as const,
   detail: (loanId: string) => ['loan', loanId] as const,
+  transactions: (loanId: string, page: number) => ['loan', loanId, 'transactions', page] as const,
+};
+
+export const profileKeys = {
+  me: ['profile', 'me'] as const,
+  photo: ['profile', 'photo'] as const,
 };
 
 /** Throw the ApiError so TanStack treats the query as failed and `retry`/state logic can read it. */
@@ -31,6 +43,24 @@ async function unwrapLoans(): Promise<LoanListItemVM[]> {
 
 async function unwrapLoan(loanId: string): Promise<LoanDetailVM> {
   const res = await getLoan(loanId);
+  if (res.ok) return res.data;
+  throw res.error;
+}
+
+async function unwrapProfile(): Promise<BorrowerProfileVM> {
+  const res = await getProfile();
+  if (res.ok) return res.data;
+  throw res.error;
+}
+
+async function unwrapPhoto(): Promise<string | null> {
+  const res = await getPhoto();
+  if (res.ok) return res.data;
+  throw res.error;
+}
+
+async function unwrapTransactions(loanId: string, page: number): Promise<TransactionsPageVM> {
+  const res = await getTransactions(loanId, page);
   if (res.ok) return res.data;
   throw res.error;
 }
@@ -49,6 +79,34 @@ export function useLoanQuery(loanId: string): UseQueryResult<LoanDetailVM> {
   return useQuery({
     queryKey: loanKeys.detail(loanId),
     queryFn: () => unwrapLoan(loanId),
+    enabled: isLive() && loanId.length > 0,
+  });
+}
+
+export function useProfileQuery(): UseQueryResult<BorrowerProfileVM> {
+  return useQuery({
+    queryKey: profileKeys.me,
+    queryFn: unwrapProfile,
+    enabled: isLive(),
+  });
+}
+
+export function usePhotoQuery(hasPhoto = true): UseQueryResult<string | null> {
+  return useQuery({
+    queryKey: profileKeys.photo,
+    queryFn: unwrapPhoto,
+    enabled: isLive() && hasPhoto,
+    staleTime: 60 * 60 * 1000, // 1 hour per API guide
+  });
+}
+
+export function useTransactionsQuery(
+  loanId: string,
+  page = 1,
+): UseQueryResult<TransactionsPageVM> {
+  return useQuery({
+    queryKey: loanKeys.transactions(loanId, page),
+    queryFn: () => unwrapTransactions(loanId, page),
     enabled: isLive() && loanId.length > 0,
   });
 }

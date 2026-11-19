@@ -12,8 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/hooks/use-theme';
 
-// Profile is hidden from the app in all modes. Code is retained but the tab is never reachable.
-const SHOW_PROFILE_TAB = false;
+// Profile tab is backed by the live /api/v1/me endpoint.
+const SHOW_PROFILE_TAB = true;
 
 function TabIcon({
   focused,

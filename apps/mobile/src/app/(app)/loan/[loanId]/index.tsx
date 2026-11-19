@@ -91,11 +91,18 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
     ['Loan account number', vm.accountNumber],
     ['EMI amount', emiRow],
     ['Frequency', freq ? freq.label : '\u2014'],
-    ['Loan start date', vm.loanDate ? formatIsoDate(vm.loanDate) : '\u2014'],
+    ['Loan sanction date', vm.loanDate ? formatIsoDate(vm.loanDate) : '\u2014'],
+    ['First installment date', vm.startDate ? formatIsoDate(vm.startDate) : '\u2014'],
     ['Maturity date', vm.maturityDate ? formatIsoDate(vm.maturityDate) : '\u2014'],
     ['Financed amount', formatPaise(vm.principalPaise)],
     ['Total paid', formatPaise(vm.totalPaidPaise)],
   ];
+  if (vm.numberOfInstallments) {
+    detailRows.push(['Total tenure', `${vm.numberOfInstallments} installments`]);
+  }
+  if (vm.weeklyOff) {
+    detailRows.push(['Weekly off day', vm.weeklyOff]);
+  }
 
   return (
     <ScrollView
@@ -105,7 +112,7 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
         gap: theme.spacing.lg,
       }}
     >
-      {/* Hero: account, status, outstanding (restructured — no productName / progress in live) */}
+      {/* Hero: account, status, outstanding */}
       <Card tone="card" style={cardStyle}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
           <IconTile name="briefcase-outline" size={40} background="primarySoft" />
@@ -140,11 +147,11 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
           </View>
         </View>
 
-        {/* Mock-only: EMIs-paid progress bar (no wire source -> hidden in live mode) */}
+        {/* EMIs-paid progress bar (mock or when numberOfInstallments is present) */}
         {SHOW_MOCK_CARDS && mockLoan ? <MockProgress loan={mockLoan} /> : null}
       </Card>
 
-      {/* Overdue warning (informational only) */}
+      {/* Overdue warning banner with installment count */}
       {vm.overdueAmountPaise > 0 ? (
         <View
           accessible
@@ -175,14 +182,136 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
             <Text style={{ color: theme.colors.danger, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
               {formatPaise(vm.overdueAmountPaise)} overdue
             </Text>
+            <Text style={{ color: theme.colors.danger, fontSize: theme.typography.size.caption }}>
+              {vm.installmentsOverdue != null
+                ? `${vm.installmentsOverdue} ${vm.installmentsOverdue === 1 ? 'installment' : 'installments'} overdue`
+                : 'Overdue balance pending clearance'}
+            </Text>
           </View>
         </View>
       ) : null}
 
-      {/* Mock-only: next installment due card (no wire source -> hidden in live mode) */}
-      {SHOW_MOCK_CARDS && mockLoan ? <MockNextDue loan={mockLoan} /> : null}
+      {/* Next collection scheduled card (wire-backed for weekly loans, or mock fallback) */}
+      {vm.nextCollectionDate ? (
+        <Card tone="card" style={{ ...cardStyle, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+          <IconTile name="calendar-outline" size={40} background="primarySoft" />
+          <View style={{ flex: 1 }}>
+            <Text style={caps}>Next collection scheduled</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
+              <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
+                {formatIsoDate(vm.nextCollectionDate)}
+              </Text>
+              {vm.weeklyOff ? (
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
+                  (Closed on {vm.weeklyOff})
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        </Card>
+      ) : SHOW_MOCK_CARDS && mockLoan ? (
+        <MockNextDue loan={mockLoan} />
+      ) : null}
 
-      {/* Loan details (collapsible) — wire-backed rows, kept in both modes */}
+      {/* Last payment received (wire-backed) */}
+      {vm.lastPayment ? (
+        <Card tone="card" style={{ ...cardStyle, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+          <IconTile name="checkmark-circle-outline" size={40} background="successSoft" color="success" />
+          <View style={{ flex: 1 }}>
+            <Text style={caps}>Last payment received</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: theme.spacing.sm }}>
+              <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
+                {formatPaise(vm.lastPayment.amountPaise)}
+              </Text>
+              {vm.lastPayment.date ? (
+                <Text style={{ color: theme.colors.success, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold }}>
+                  on {formatIsoDate(vm.lastPayment.date)}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        </Card>
+      ) : null}
+
+      {/* Settlement agreement card (wire-backed) */}
+      {vm.settlement ? (
+        <Card tone="card" style={{ ...cardStyle, borderColor: theme.colors.warning, borderWidth: 1.5 }}>
+          <SectionHeading icon="hand-left-outline" title="Settlement agreement" />
+          <View style={{ gap: 2 }}>
+            <Text style={caps}>Agreed settlement amount</Text>
+            <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.heading, fontWeight: theme.typography.weight.bold }}>
+              {formatPaise(vm.settlement.settlementAmountPaise)}
+            </Text>
+          </View>
+          <View>
+            {vm.settlement.settlementDate ? (
+              <AmountRow label="Agreement date" value={formatIsoDate(vm.settlement.settlementDate)} />
+            ) : null}
+            <AmountRow label="Paid since settlement" value={formatPaise(vm.settlement.paidSinceSettlementPaise)} tone="success" />
+            <AmountRow label="Remaining settlement balance" value={formatPaise(vm.settlement.balancePaise)} bold tone="danger" />
+            {vm.settlement.installmentAmountPaise ? (
+              <AmountRow
+                label="Installment terms"
+                value={`${formatPaise(vm.settlement.installmentAmountPaise)} ${vm.settlement.paymentFrequency ? `/ ${vm.settlement.paymentFrequency}` : ''}`}
+              />
+            ) : null}
+          </View>
+        </Card>
+      ) : null}
+
+      {/* Dues & charges breakdown card (wire-backed) */}
+      {vm.dues ? (
+        <Card tone="card" style={cardStyle}>
+          <SectionHeading icon="calculator-outline" title="Dues & charges breakdown" />
+          <View>
+            <AmountRow label="Installments due so far" value={formatPaise(vm.dues.installmentsDuePaise)} />
+            {vm.dues.lateFeesPaise > 0 ? (
+              <AmountRow label="Late fees accrued" prefix="+" value={formatPaise(vm.dues.lateFeesPaise)} tone="danger" />
+            ) : null}
+            {vm.dues.overdueInterestPaise > 0 ? (
+              <AmountRow label="Overdue interest" prefix="+" value={formatPaise(vm.dues.overdueInterestPaise)} tone="danger" />
+            ) : null}
+            {vm.dues.recoveryVisitChargesPaise > 0 ? (
+              <AmountRow label="Recovery visit charges" prefix="+" value={formatPaise(vm.dues.recoveryVisitChargesPaise)} tone="danger" />
+            ) : null}
+            {vm.dues.discountPaise > 0 ? (
+              <AmountRow label="Concession / discount" prefix={'\u2212'} value={formatPaise(vm.dues.discountPaise)} tone="success" />
+            ) : null}
+            <Divider />
+            <AmountRow label="Total due so far" value={formatPaise(vm.dues.totalDuePaise)} bold />
+            <AmountRow label="Total paid so far" prefix={'\u2212'} value={formatPaise(vm.dues.totalPaidPaise)} tone="success" bold />
+            <Divider />
+            <AmountRow label="Current overdue balance" value={formatPaise(vm.dues.overdueAmountPaise)} tone={vm.dues.overdueAmountPaise > 0 ? 'danger' : undefined} bold />
+          </View>
+        </Card>
+      ) : null}
+
+      {/* Disbursal & deductions card (wire-backed) */}
+      {vm.disbursal ? (
+        <Card tone="card" style={cardStyle}>
+          <SectionHeading icon="cash-outline" title="Disbursal & deductions" />
+          <View>
+            <AmountRow label="Sanctioned loan amount" value={formatPaise(vm.disbursal.loanAmountPaise)} bold />
+            {vm.disbursal.serviceChargesPaise > 0 ? (
+              <AmountRow label="Service charges" prefix={'\u2212'} value={formatPaise(vm.disbursal.serviceChargesPaise)} />
+            ) : null}
+            {vm.disbursal.verificationChargesPaise > 0 ? (
+              <AmountRow label="Verification charges" prefix={'\u2212'} value={formatPaise(vm.disbursal.verificationChargesPaise)} />
+            ) : null}
+            {vm.disbursal.advanceInstallmentPaise > 0 ? (
+              <AmountRow label="Advance installment" prefix={'\u2212'} value={formatPaise(vm.disbursal.advanceInstallmentPaise)} />
+            ) : null}
+            {vm.disbursal.previousLoanAdjustmentPaise > 0 ? (
+              <AmountRow label="Previous loan adjustment" prefix={'\u2212'} value={formatPaise(vm.disbursal.previousLoanAdjustmentPaise)} />
+            ) : null}
+            <Divider />
+            <AmountRow label="Total deductions" prefix={'\u2212'} value={formatPaise(vm.disbursal.totalDeductionsPaise)} bold />
+            <AmountRow label="Net amount disbursed" value={formatPaise(vm.disbursal.amountDisbursedPaise)} tone="success" bold />
+          </View>
+        </Card>
+      ) : null}
+
+      {/* Loan details (collapsible) — wire-backed rows */}
       <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: 0, gap: 0, overflow: 'hidden' }}>
         <Pressable
           accessibilityRole="button"
@@ -198,7 +327,7 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <SectionHeading icon="document-text-outline" title="Loan details" />
+          <SectionHeading icon="document-text-outline" title="Loan specifications" />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
               {detailsOpen ? 'Collapse' : 'Expand'}
@@ -211,26 +340,19 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
             {detailRows.map(([label, value], i) => (
               <DetailRow key={label} label={label} value={value} shaded={i % 2 === 1} />
             ))}
-            {/* Mock-only rows: scheme / branch / first EMI / last payment */}
+            {/* Mock-only rows: scheme / branch */}
             {SHOW_MOCK_CARDS && mockLoan ? (
               <>
                 <DetailRow label="Scheme" value={mockLoan.scheme} shaded={detailRows.length % 2 === 1} />
                 <DetailRow label="Originating branch" value={mockLoan.branch} shaded={detailRows.length % 2 === 0} />
-                <DetailRow label="First EMI date" value={formatDate(mockLoan.firstEmiDate)} shaded={detailRows.length % 2 === 1} />
-                <DetailRow
-                  label="Last recorded payment"
-                  value={mockLoan.lastPayment ? `${formatDate(mockLoan.lastPayment.date)} (${formatINR(mockLoan.lastPayment.amount)})` : '\u2014'}
-                  shaded={detailRows.length % 2 === 0}
-                  highlight={!!mockLoan.lastPayment}
-                />
               </>
             ) : null}
           </View>
         ) : null}
       </Card>
 
-      {/* Mock-only rich cards (no wire source -> hidden in live mode) */}
-      {SHOW_MOCK_CARDS && mockLoan ? <MockRichCards loan={mockLoan} /> : null}
+      {/* Mock-only rich cards if in mock mode and no live dues */}
+      {SHOW_MOCK_CARDS && mockLoan && !vm.dues ? <MockRichCards loan={mockLoan} /> : null}
 
       {/* Footer disclaimer (always visible) */}
       <View style={{ alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing.md }}>

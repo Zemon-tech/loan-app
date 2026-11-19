@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { BrandMark, Icon, SegmentedControl, StatusBadge } from '@/components/ui';
+import { useLoanData } from '@/features/api/dataSource';
 import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
 
@@ -44,6 +45,9 @@ export function WorkspaceHeader({
   segment: WorkspaceSegment;
 }) {
   const theme = useAppTheme();
+  const loanData = useLoanData(loanId);
+  const vm = loanData.status === 'success' ? loanData.data : null;
+  const status = vm?.status ?? loan?.status ?? null;
 
   function onChange(next: WorkspaceSegment) {
     // Replace (not push) so Back always returns to Home, not through the segments.
@@ -93,9 +97,9 @@ export function WorkspaceHeader({
             >
               {TITLES[segment]}
             </Text>
-            {loan ? (
+            {status ? (
               <StatusBadge
-                status={loan.status === 'OVERDUE' ? 'OVERDUE' : loan.status === 'CLOSED' ? 'CLOSED' : 'ACTIVE'}
+                status={status === 'OVERDUE' ? 'OVERDUE' : status === 'CLOSED' ? 'CLOSED' : 'ACTIVE'}
               />
             ) : null}
           </View>

@@ -5,17 +5,31 @@
  * Paths carry the FULL `/api/v1` prefix (never `/v1`). `loanRef` is passed through opaque and
  * URL-encoded for the detail path.
  */
-import { toLoanDetailVM, toLoanListItemVM } from './adapter';
+import {
+  toBorrowerProfileVM,
+  toLoanDetailVM,
+  toLoanListItemVM,
+  toTransactionsPageVM,
+} from './adapter';
+import { baseUrl } from './config';
 import { request } from './client';
 import { getDeviceId } from './deviceId';
 import { AdapterError, type ApiResult } from './errors';
-import type { LoanDetailVM, LoanListItemVM } from './vm';
+import { getAccessToken } from './tokenStore';
+import type {
+  BorrowerProfileVM,
+  LoanDetailVM,
+  LoanListItemVM,
+  TransactionsPageVM,
+} from './vm';
 import type {
   LoanDetailWire,
   LoansResponseWire,
   LogoutResponse,
   OtpRequestAccepted,
   OtpVerifyResponse,
+  TransactionsResponseWire,
+  UserProfileWire,
 } from './wireTypes';
 
 /** POST /api/v1/auth/otp/request */
@@ -72,6 +86,79 @@ export async function getLoan(loanId: string): Promise<ApiResult<LoanDetailVM>> 
     return { ok: true, data: toLoanDetailVM(res.data) };
   } catch (e) {
     if (e instanceof AdapterError) return { ok: false, error: { kind: 'ADAPTER' } };
+    return { ok: false, error: { kind: 'ADAPTER' } };
+  }
+}
+
+/** GET /api/v1/me -> adapted borrower profile VM. */
+export async function getProfile(): Promise<ApiResult<BorrowerProfileVM>> {
+  const res = await request<UserProfileWire>('/api/v1/me', { auth: true });
+  if (!res.ok) return res;
+  try {
+    return { ok: true, data: toBorrowerProfileVM(res.data) };
+  } catch {
+    return { ok: false, error: { kind: 'ADAPTER' } };
+  }
+}
+
+/**
+ * GET /api/v1/me/photo -> In-memory JPEG data URI or null if not found (404).
+ * Strictly memory-only per API guide: never written to disk or device gallery.
+ */
+export async function getPhoto(): Promise<ApiResult<string | null>> {
+  const origin = baseUrl();
+  const url = `${origin}/api/v1/me/photo`;
+  const token = getAccessToken();
+  if (!token) return { ok: false, error: { kind: 'UNAUTHORIZED', status: 401 } };
+
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.status === 404) {
+      return { ok: true, data: null };
+    }
+    if (res.status === 401) {
+      return { ok: false, error: { kind: 'UNAUTHORIZED', status: 401 } };
+    }
+    if (!res.ok) {
+      return { ok: false, error: { kind: 'SERVER', status: res.status } };
+    }
+
+    const buffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+    }
+    const base64 = btoa(binary);
+    return { ok: true, data: `data:image/jpeg;base64,${base64}` };
+  } catch {
+    return { ok: false, error: { kind: 'NETWORK' } };
+  }
+}
+
+/** GET /api/v1/loans/{loanRef}/transactions?page=X&pageSize=Y */
+export async function getTransactions(
+  loanId: string,
+  page = 1,
+  pageSize = 50,
+): Promise<ApiResult<TransactionsPageVM>> {
+  const query = `page=${page}&pageSize=${pageSize}`;
+  const res = await request<TransactionsResponseWire>(
+    `/api/v1/loans/${encodeURIComponent(loanId)}/transactions?${query}`,
+    { auth: true },
+  );
+  if (!res.ok) return res;
+  try {
+    return { ok: true, data: toTransactionsPageVM(res.data) };
+  } catch {
     return { ok: false, error: { kind: 'ADAPTER' } };
   }
 }
