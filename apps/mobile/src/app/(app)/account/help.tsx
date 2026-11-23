@@ -14,8 +14,8 @@ import { Links } from '@/constants/links';
 import { PLACEHOLDER_GRIEVANCE_OFFICER as OFFICER, PLACEHOLDER_SUPPORT as SUPPORT } from '@/features/profile/placeholderData';
 import { useAppTheme } from '@/hooks/use-theme';
 
-// Account screens are hidden in all modes (Profile removed) — retained but unreachable.
-const SHOW_ACCOUNT = false;
+// Help & support screen.
+const SHOW_ACCOUNT = true;
 
 const FAQ: { q: string; a: string }[] = [
   {

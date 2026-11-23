@@ -99,7 +99,12 @@ function requireString(value: unknown, field: string): string {
 }
 
 export function toBorrowerProfileVM(wire: UserProfileWire): BorrowerProfileVM {
-  const name = typeof wire?.name === 'string' ? wire.name.trim() : 'Customer';
+  const name =
+    typeof (wire as any)?.fullName === 'string'
+      ? (wire as any).fullName.trim()
+      : typeof wire?.name === 'string'
+        ? wire.name.trim()
+        : 'Customer';
   const parts = name.split(/\s+/).filter(Boolean);
   const first = parts[0] ?? '';
   const last = parts[parts.length - 1] ?? '';
@@ -107,10 +112,13 @@ export function toBorrowerProfileVM(wire: UserProfileWire): BorrowerProfileVM {
     ? `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
     : (first.charAt(0) || 'C').toUpperCase();
 
+  const phone = (wire as any)?.mobile ?? (wire as any)?.phone ?? null;
+
   return {
     name: name || 'Customer',
     hasPhoto: Boolean(wire?.hasPhoto),
     initials,
+    phone,
   };
 }
 

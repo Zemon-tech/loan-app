@@ -102,7 +102,7 @@ export default function OtpScreen() {
 
 function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: string | null }) {
   const theme = useAppTheme();
-  const { completeLogin } = useSession();
+  const { completeLogin, startLogin } = useSession();
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<LiveStep>('otp');
   const [message, setMessage] = useState<string | null>(null);
@@ -139,6 +139,9 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
     }
 
     if (res.data.status === 'authenticated') {
+      if (mobileDigits) {
+        startLogin(`+91${mobileDigits}`);
+      }
       // Resolves once tokens are saved; the route guards then move the user to /loans.
       await completeLogin({
         accessToken: res.data.accessToken,
@@ -346,7 +349,7 @@ function DobStep({
 
 function MockOtp({ mobile }: { mobile: string | null }) {
   const theme = useAppTheme();
-  const { completeLogin } = useSession();
+  const { completeLogin, startLogin } = useSession();
   const [otp, setOtp] = useState('');
   const [mode, setMode] = useState<Mode>('entry');
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);

@@ -68,9 +68,9 @@ export function Button({
           : theme.colors.card;
   const fgRole: AppColorRole =
     variant === 'secondary'
-      ? 'textPrimary'
+      ? 'secondary'
       : variant === 'ghost'
-        ? 'textSecondary'
+        ? 'interactive'
         : 'onPrimary';
   const fg = theme.colors[fgRole];
   const outlined = variant === 'secondary';
@@ -113,9 +113,9 @@ export function Button({
           {
             backgroundColor: bg,
             borderColor: outlined ? theme.colors.border : 'transparent',
-            borderWidth: outlined ? StyleSheet.hairlineWidth : 0,
-            minHeight: variant === 'ghost' ? theme.touchTarget.min : 52,
-            borderRadius: theme.radius.lg,
+            borderWidth: outlined ? 1 : 0,
+            minHeight: variant === 'ghost' ? theme.touchTarget.min : 50,
+            borderRadius: theme.radius.md,
             paddingHorizontal: theme.spacing.lg,
             opacity: disabled ? 0.5 : pressed && variant === 'ghost' ? 0.7 : 1,
           },

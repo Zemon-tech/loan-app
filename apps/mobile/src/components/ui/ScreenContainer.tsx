@@ -9,12 +9,13 @@
  * is safe if the window does resize (no double offset) and when the view sits above a tab bar.
  * (Do not set android `softwareKeyboardLayoutMode: pan` together with this.)
  */
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
   ScrollView,
   View,
+  type RefreshControlProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -31,6 +32,8 @@ export interface ScreenContainerProps {
   tone?: 'background' | 'canvas';
   /** Add the bottom safe-area inset. Set false on screens shown above the tab bar. */
   bottomInset?: boolean;
+  /** Optional pull-to-refresh component for the ScrollView. */
+  refreshControl?: ReactElement<RefreshControlProps>;
   /**
    * Form screens: when the keyboard opens, scroll to the bottom so the focused field and the
    * primary button stay visible above it (also covers hidden inputs the OS cannot auto-scroll to).
@@ -45,6 +48,7 @@ export function ScreenContainer({
   contentStyle,
   tone = 'background',
   bottomInset = true,
+  refreshControl,
   scrollToEndOnKeyboard = false,
 }: ScreenContainerProps) {
   const theme = useAppTheme();
@@ -96,6 +100,7 @@ export function ScreenContainer({
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
         >
           {children}
         </ScrollView>

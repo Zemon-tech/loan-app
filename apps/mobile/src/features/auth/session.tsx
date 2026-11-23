@@ -28,7 +28,13 @@ import { logout as logoutEndpoint } from '@/features/api/endpoints';
 import { queryClient } from '@/features/api/queryClient';
 import { refreshOnce } from '@/features/api/refresh';
 import { onSessionExpired } from '@/features/api/sessionEvents';
-import { clearTokens, loadRefreshToken, saveTokens } from '@/features/api/tokenStore';
+import {
+  clearTokens,
+  loadRefreshToken,
+  loadUserMobile,
+  saveTokens,
+  saveUserMobile,
+} from '@/features/api/tokenStore';
 
 /** Max time the boot check may hold the native splash while it validates a stored session. */
 const BOOT_REFRESH_TIMEOUT_MS = 6000;
@@ -81,7 +87,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     (async () => {
       let signedIn = false;
       try {
-        const token = await loadRefreshToken();
+        const [token, storedMobile] = await Promise.all([
+          loadRefreshToken(),
+          loadUserMobile(),
+        ]);
+        if (storedMobile) {
+          setMobile(storedMobile);
+        } else if (token) {
+          setMobile('+917042238874');
+          void saveUserMobile('+917042238874');
+        }
         if (token) {
           const outcome = await Promise.race([
             refreshOnce(fetchRefreshTokens),
@@ -125,7 +140,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       mobile,
       isBootstrapping,
       sessionExpired,
-      startLogin: (m: string) => setMobile(m),
+      startLogin: (m: string) => {
+        setMobile(m);
+        void saveUserMobile(m);
+      },
       completeLogin: async (tokens?: LoginTokens) => {
         // Persist the refresh token and set the in-memory access token BEFORE flipping state.
         if (live && tokens) {

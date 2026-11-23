@@ -48,7 +48,11 @@ export function LoanCard({ loan, onPress }: LoanCardProps) {
     >
       <Card
         tone="card"
-        style={{ borderRadius: theme.radius.xl, padding: theme.spacing.lg, gap: theme.spacing.md }}
+        style={{
+          borderRadius: theme.radius.lg,
+          padding: theme.spacing.lg,
+          gap: theme.spacing.md,
+        }}
       >
         {/* Account + status */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -81,50 +85,66 @@ export function LoanCard({ loan, onPress }: LoanCardProps) {
           </Text>
         </View>
 
-        {/* Overdue + chevron */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: theme.spacing.md,
-            padding: theme.spacing.md,
-            borderRadius: theme.radius.lg,
-            backgroundColor: overdue ? theme.colors.dangerSoft : theme.colors.primarySoft,
-          }}
-        >
-          <View style={{ flex: 1 }}>
-            {overdue ? (
-              <View style={{ gap: 2 }}>
-                <Text style={[label, { color: theme.colors.danger }]}>Overdue</Text>
-                <Text
-                  style={{
-                    color: theme.colors.danger,
-                    fontSize: theme.typography.size.subtitle,
-                    fontWeight: theme.typography.weight.bold,
-                  }}
-                >
-                  {formatINR(loan.overdueAmountPaise)}
-                </Text>
-              </View>
-            ) : (
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-                View loan details
-              </Text>
-            )}
-          </View>
+        {/* Overdue or View Details strip */}
+        {overdue ? (
           <View
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: theme.colors.card,
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'center',
+              gap: theme.spacing.md,
+              padding: theme.spacing.md,
+              borderRadius: theme.radius.md,
+              backgroundColor: theme.colors.dangerSoft,
             }}
           >
-            <Icon name="chevron-forward" size={18} color="textPrimary" />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[label, { color: theme.colors.danger }]}>Overdue</Text>
+              <Text
+                style={{
+                  color: theme.colors.danger,
+                  fontSize: theme.typography.size.subtitle,
+                  fontWeight: theme.typography.weight.bold,
+                }}
+              >
+                {formatINR(loan.overdueAmountPaise)}
+              </Text>
+            </View>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: theme.colors.card,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icon name="chevron-forward" size={16} color="danger" />
+            </View>
           </View>
-        </View>
+        ) : (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingTop: theme.spacing.sm,
+              borderTopWidth: 1,
+              borderTopColor: theme.colors.border,
+            }}
+          >
+            <Text
+              style={{
+                color: theme.colors.interactive,
+                fontSize: theme.typography.size.body,
+                fontWeight: theme.typography.weight.semibold,
+              }}
+            >
+              View loan details
+            </Text>
+            <Icon name="chevron-forward" size={18} color="interactive" />
+          </View>
+        )}
       </Card>
     </PressableScale>
   );

@@ -6,8 +6,11 @@
  * minimally. A failed query whose error is UNAUTHORIZED surfaces as `session_expired`.
  */
 import {
+  useInfiniteQuery,
   useQuery,
+  type InfiniteData,
   type QueryKey,
+  type UseInfiniteQueryResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
 import * as Network from 'expo-network';
@@ -26,7 +29,7 @@ import type {
 export const loanKeys = {
   all: ['loans'] as const,
   detail: (loanId: string) => ['loan', loanId] as const,
-  transactions: (loanId: string, page: number) => ['loan', loanId, 'transactions', page] as const,
+  transactions: (loanId: string, page: number | string) => ['loan', loanId, 'transactions', page] as const,
 };
 
 export const profileKeys = {
@@ -107,6 +110,23 @@ export function useTransactionsQuery(
   return useQuery({
     queryKey: loanKeys.transactions(loanId, page),
     queryFn: () => unwrapTransactions(loanId, page),
+    enabled: isLive() && loanId.length > 0,
+  });
+}
+
+export function useInfiniteTransactionsQuery(
+  loanId: string,
+): UseInfiniteQueryResult<InfiniteData<TransactionsPageVM, number>, Error> {
+  return useInfiniteQuery({
+    queryKey: loanKeys.transactions(loanId, 'infinite'),
+    queryFn: ({ pageParam = 1 }) => unwrapTransactions(loanId, pageParam as number),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.page < lastPage.totalPages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
     enabled: isLive() && loanId.length > 0,
   });
 }

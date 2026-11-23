@@ -13,7 +13,7 @@ export function showUnbackedScreens(): boolean {
 
 /** True when the enriched loan-detail cards/rows should render. */
 export function showUnbackedCards(): boolean {
-  return true;
+  return false;
 }
 
 /** True when the Profile tab should render. */

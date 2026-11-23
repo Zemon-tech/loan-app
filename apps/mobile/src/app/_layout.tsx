@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Image, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppColors } from '@/constants/theme';
@@ -53,8 +54,18 @@ function RootNavigator() {
     return () => clearTimeout(id);
   }, []);
 
-  // The native splash is still covering the screen while the stored session is validated.
-  if (isBootstrapping) return null;
+  // Splash screen presentation while session boots.
+  if (isBootstrapping) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fddc69', alignItems: 'center', justifyContent: 'center' }}>
+        <Image
+          source={require('../../assets/images/splash-icon.png')}
+          style={{ width: 220, height: 220 }}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  }
 
   return (
     <Stack

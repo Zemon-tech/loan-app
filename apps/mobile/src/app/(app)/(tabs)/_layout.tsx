@@ -69,12 +69,13 @@ export default function TabsLayout() {
       backBehavior="history"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
+        tabBarActiveTintColor: theme.colors.secondary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarLabelStyle: { fontSize: theme.typography.size.caption, fontWeight: '600', marginTop: 2 },
         tabBarStyle: {
-          backgroundColor: theme.colors.card,
+          backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
+          borderTopWidth: 1,
           height: 60 + insets.bottom,
           paddingTop: theme.spacing.sm,
           paddingBottom: Math.max(insets.bottom, theme.spacing.sm),

@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 
 import { apiMode } from '@/features/api/config';
 import { fetchBootConfig, type BootStatus } from '@/features/boot/bootConfig';
@@ -33,7 +33,15 @@ export default function Index() {
   }, [live]);
 
   if (isBootstrapping || status === null) {
-    return <View style={{ flex: 1, backgroundColor: theme.colors.canvas }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fddc69', alignItems: 'center', justifyContent: 'center' }}>
+        <Image
+          source={require('../../assets/images/splash-icon.png')}
+          style={{ width: 220, height: 220 }}
+          resizeMode="contain"
+        />
+      </View>
+    );
   }
 
   if (status === 'maintenance') return <Redirect href="/maintenance" />;

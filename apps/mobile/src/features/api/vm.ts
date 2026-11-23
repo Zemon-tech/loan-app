@@ -12,6 +12,7 @@ export interface BorrowerProfileVM {
   name: string;
   hasPhoto: boolean;
   initials: string;
+  phone?: string | null;
 }
 
 export interface LastPaymentVM {

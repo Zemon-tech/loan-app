@@ -6,7 +6,10 @@
  */
 import { useCallback } from 'react';
 
+import type { Paise } from '@app/shared';
+
 import { apiMode } from './config';
+import { isSessionExpired } from './errors';
 import {
   mockLoanToDetailVM,
   mockLoanToListItemVM,
@@ -14,6 +17,7 @@ import {
 } from './mockAdapter';
 import {
   toQueryState,
+  useInfiniteTransactionsQuery,
   useLoanQuery,
   useLoansQuery,
   usePhotoQuery,
@@ -26,6 +30,7 @@ import type {
   LoanListItemVM,
   QueryState,
   TransactionsPageVM,
+  TransactionVM,
 } from './vm';
 import {
   findPlaceholderLoan,
@@ -78,6 +83,7 @@ export function useProfileData(): DataState<BorrowerProfileVM> {
       name: PLACEHOLDER_CUSTOMER.name,
       hasPhoto: false,
       initials: PLACEHOLDER_CUSTOMER.initials,
+      phone: PLACEHOLDER_CUSTOMER.mobile,
     }),
     [],
   );
@@ -98,16 +104,85 @@ export function usePhotoData(hasPhoto = true): DataState<string | null> {
   return mockQuery;
 }
 
-export function useTransactionsData(loanId: string, page = 1): DataState<TransactionsPageVM | null> {
+export interface InfiniteTransactionsDataState {
+  status: 'loading' | 'success' | 'error' | 'session_expired';
+  data: {
+    transactions: TransactionVM[];
+    totalCreditPaise: Paise;
+    totalDebitPaise: Paise;
+    totalCount: number;
+    totalPages: number;
+  } | null;
+  fetchNextPage: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  refetch: () => void;
+  isRefreshing: boolean;
+}
+
+export function useTransactionsData(loanId: string): InfiniteTransactionsDataState {
   const live = apiMode() === 'live';
-  const liveQuery = useTransactionsQuery(loanId, page);
+  const liveQuery = useInfiniteTransactionsQuery(loanId);
 
   const loadMock = useCallback((): TransactionsPageVM | null => {
     const loan = findPlaceholderLoan(loanId);
     return loan ? mockLoanTransactionsToPageVM(loan) : null;
   }, [loanId]);
-  const mockQuery = useMockQuery<TransactionsPageVM | null>(`transactions:vm:${loanId}:${page}`, loadMock);
+  const mockQuery = useMockQuery<TransactionsPageVM | null>(`transactions:vm:${loanId}`, loadMock);
 
-  if (live) return toQueryState(liveQuery);
-  return mockQuery;
+  if (live) {
+    let status: InfiniteTransactionsDataState['status'] = 'loading';
+    if (liveQuery.isError) {
+      status = isSessionExpired(liveQuery.error) ? 'session_expired' : 'error';
+    } else if (liveQuery.data !== undefined) {
+      status = 'success';
+    }
+
+    const pages = liveQuery.data?.pages ?? [];
+    const firstPage = pages[0];
+    const transactions = pages.flatMap((p) => p.transactions);
+
+    const data = firstPage
+      ? {
+          transactions,
+          totalCreditPaise: firstPage.totalCreditPaise,
+          totalDebitPaise: firstPage.totalDebitPaise,
+          totalCount: firstPage.totalCount,
+          totalPages: firstPage.totalPages,
+        }
+      : null;
+
+    return {
+      status,
+      data,
+      fetchNextPage: () => {
+        void liveQuery.fetchNextPage();
+      },
+      hasNextPage: Boolean(liveQuery.hasNextPage),
+      isFetchingNextPage: Boolean(liveQuery.isFetchingNextPage),
+      refetch: () => {
+        void liveQuery.refetch();
+      },
+      isRefreshing: liveQuery.isRefetching && !liveQuery.isFetchingNextPage,
+    };
+  }
+
+  const mockData = mockQuery.status === 'success' ? mockQuery.data : null;
+  return {
+    status: mockQuery.status,
+    data: mockData
+      ? {
+          transactions: mockData.transactions,
+          totalCreditPaise: mockData.totalCreditPaise,
+          totalDebitPaise: mockData.totalDebitPaise,
+          totalCount: mockData.totalCount,
+          totalPages: mockData.totalPages,
+        }
+      : null,
+    fetchNextPage: () => {},
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    refetch: mockQuery.refetch,
+    isRefreshing: false,
+  };
 }

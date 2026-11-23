@@ -30,6 +30,8 @@ export interface PressableScaleProps {
   hitSlop?: number | { top?: number; bottom?: number; left?: number; right?: number };
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export function PressableScale({
   children,
   onPress,
@@ -73,22 +75,20 @@ export function PressableScale({
   }
 
   return (
-    <Animated.View style={[animatedStyle, style]}>
-      <Pressable
-        accessibilityRole={accessibilityRole}
-        accessibilityLabel={accessibilityLabel}
-        accessibilityHint={accessibilityHint}
-        accessibilityState={{ disabled, ...accessibilityState }}
-        disabled={disabled}
-        hitSlop={hitSlop}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={handlePress}
-        onLongPress={onLongPress}
-        style={{ width: '100%' }}
-      >
-        {typeof children === 'function' ? (state) => children(state) : children}
-      </Pressable>
-    </Animated.View>
+    <AnimatedPressable
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled, ...accessibilityState }}
+      disabled={disabled}
+      hitSlop={hitSlop}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={handlePress}
+      onLongPress={onLongPress}
+      style={[animatedStyle, style]}
+    >
+      {typeof children === 'function' ? (state) => children(state) : children}
+    </AnimatedPressable>
   );
 }

@@ -24,8 +24,8 @@ import { LanguageSheet } from '@/features/settings/components/LanguageSheet';
 import { LANGUAGE_LABEL, usePreferences } from '@/features/settings/preferences';
 import { useAppTheme } from '@/hooks/use-theme';
 
-// Account screens are hidden in all modes (Profile removed) — retained but unreachable.
-const SHOW_ACCOUNT = false;
+// Account settings screen.
+const SHOW_ACCOUNT = true;
 
 export default function SettingsScreen() {
   const theme = useAppTheme();

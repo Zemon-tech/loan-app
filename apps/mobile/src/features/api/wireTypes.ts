@@ -49,6 +49,9 @@ export interface LogoutResponse {
 export interface UserProfileWire {
   name: string;
   hasPhoto: boolean;
+  mobile?: string;
+  phone?: string;
+  fullName?: string;
 }
 
 export interface LastPaymentWire {

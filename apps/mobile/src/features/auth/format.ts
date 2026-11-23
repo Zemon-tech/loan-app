@@ -13,6 +13,14 @@ export function formatMobileInput(digits: string): string {
   return digits.length > 5 ? `${digits.slice(0, 5)} ${digits.slice(5)}` : digits;
 }
 
+/** "+919876543002" -> "+91 98765 43002" (clean formatted display) */
+export function formatMobile(mobile: string | null): string {
+  if (!mobile) return '';
+  const digits = mobile.replace(/\D/g, '').slice(-10);
+  if (digits.length !== 10) return mobile;
+  return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+}
+
 /** "+919876543002" -> "+91 98XXXXX002" */
 export function maskMobile(mobile: string | null): string {
   const digits = (mobile ?? '').replace(/\D/g, '').slice(-10);

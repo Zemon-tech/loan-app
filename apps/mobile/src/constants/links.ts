@@ -9,9 +9,9 @@ export const Links = {
   fairPractices: 'https://example.com/fair-practices',
   digitalLending: 'https://example.com/digital-lending',
   keyFactStatement: 'https://example.com/kfs',
-  supportEmail: 'mailto:support@apexsme.in',
+  supportEmail: 'mailto:support@alangcredits.com',
   supportPhone: 'tel:18002098800',
-  supportWhatsApp: 'https://wa.me/919820011223',
+  supportWhatsApp: 'https://wa.me/917042238874',
   storeIos: 'https://apps.apple.com/app/id0000000000',
   storeAndroid: 'market://details?id=com.example.loanapp',
 } as const;

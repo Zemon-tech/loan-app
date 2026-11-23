@@ -9,7 +9,7 @@
  */
 import { Redirect, router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -29,7 +29,6 @@ import { useSecureScreen } from '@/features/security/useSecureScreen';
 import { HomeSkeleton } from '@/features/system/components/Skeletons';
 import { LoadErrorState, NoLoansState, OfflineBanner } from '@/features/system/components/SystemStates';
 import { LoanCard } from '@/features/loans/components/LoanCard';
-import { PLACEHOLDER_CUSTOMER } from '@/features/loans/placeholderData';
 import type { LoanListItemVM } from '@/features/api/vm';
 import { useAppTheme } from '@/hooks/use-theme';
 
@@ -79,7 +78,7 @@ export default function HomeScreen() {
     );
   }
 
-  return <HomeContent loans={query.data} />;
+  return <HomeContent loans={query.data} onRefresh={query.refetch} />;
 }
 
 function AppBar() {
@@ -97,15 +96,24 @@ function AppBar() {
   );
 }
 
-function HomeContent({ loans }: { loans: LoanListItemVM[] }) {
+function HomeContent({ loans, onRefresh }: { loans: LoanListItemVM[]; onRefresh: () => void }) {
   const theme = useAppTheme();
   const profileQuery = useProfileData();
   const profile = profileQuery.status === 'success' ? profileQuery.data : null;
   const photoQuery = usePhotoData(profile?.hasPhoto ?? false);
   const photoUri = photoQuery.status === 'success' ? photoQuery.data : null;
+  const [refreshing, setRefreshing] = useState(false);
 
-  const firstName = profile?.name ? profile.name.split(/\s+/)[0] : PLACEHOLDER_CUSTOMER.firstName;
-  const initials = profile?.initials || PLACEHOLDER_CUSTOMER.initials;
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await onRefresh();
+    profileQuery.refetch();
+    photoQuery.refetch();
+    setRefreshing(false);
+  };
+
+  const firstName = profile?.name ? profile.name.split(/\s+/)[0] : 'Borrower';
+  const initials = profile?.initials || (profile?.name ? profile.name.slice(0, 2).toUpperCase() : 'B');
 
   const summary = useMemo(() => buildLoansSummary(loans), [loans]);
   const { activeLoans, closedLoans } = summary;
@@ -182,14 +190,30 @@ function HomeContent({ loans }: { loans: LoanListItemVM[] }) {
   );
 
   return (
-    <ScreenContainer tone="canvas" bottomInset={false} header={homeHeader}>
+    <ScreenContainer
+      tone="canvas"
+      bottomInset={false}
+      header={homeHeader}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={theme.colors.primary}
+          colors={[theme.colors.primary]}
+        />
+      }
+    >
       <OfflineBanner />
 
       {/* Summary */}
       <Animated.View entering={FadeIn.duration(300).reduceMotion(ReduceMotion.System)}>
         <Card
           tone="card"
-          style={{ borderRadius: theme.radius.xl, padding: theme.spacing.lg, gap: theme.spacing.md }}
+          style={{
+            borderRadius: theme.radius.lg,
+            padding: theme.spacing.lg,
+            gap: theme.spacing.md,
+          }}
         >
           <Text style={label}>{allClosed ? 'Total outstanding' : 'Total outstanding (all active loans)'}</Text>
           <Text
@@ -361,8 +385,8 @@ function SummaryStat({
         flex: 1,
         gap: 2,
         padding: theme.spacing.md,
-        borderRadius: theme.radius.lg,
-        backgroundColor: tone === 'danger' ? theme.colors.dangerSoft : theme.colors.primarySoft,
+        borderRadius: theme.radius.md,
+        backgroundColor: tone === 'danger' ? theme.colors.dangerSoft : theme.colors.mutedSurface,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

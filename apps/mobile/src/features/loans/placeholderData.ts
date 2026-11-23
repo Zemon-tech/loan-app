@@ -16,13 +16,15 @@ export interface PlaceholderCustomer {
   firstName: string;
   initials: string;
   city: string;
+  mobile?: string;
 }
 
 export const PLACEHOLDER_CUSTOMER: PlaceholderCustomer = {
-  name: 'Rahul Kumar',
-  firstName: 'Rahul',
-  initials: 'RK',
+  name: 'Test Demo',
+  firstName: 'Test',
+  initials: 'TD',
   city: 'Demo City',
+  mobile: '+91 70422 38874',
 };
 
 export type LoanStatus = 'OVERDUE' | 'ACTIVE' | 'CLOSED';

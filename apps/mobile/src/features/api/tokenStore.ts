@@ -14,12 +14,32 @@
 import * as SecureStore from 'expo-secure-store';
 
 const REFRESH_TOKEN_KEY = 'refresh_token';
+const USER_MOBILE_KEY = 'user_mobile';
 
 const STORE_OPTS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
 
 let accessToken: string | null = null;
+
+/** Load the persisted mobile number for display. */
+export async function loadUserMobile(): Promise<string | null> {
+  try {
+    const value = await SecureStore.getItemAsync(USER_MOBILE_KEY, STORE_OPTS);
+    return value && value.length > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist user mobile number for display across sessions. */
+export async function saveUserMobile(mobile: string): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(USER_MOBILE_KEY, mobile, STORE_OPTS);
+  } catch {
+    // Non-fatal
+  }
+}
 
 /** Load the persisted refresh token, or null if absent / unreadable. */
 export async function loadRefreshToken(): Promise<string | null> {
@@ -59,7 +79,10 @@ export function setAccessToken(value: string | null): void {
 export async function clearTokens(): Promise<void> {
   accessToken = null;
   try {
-    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY, STORE_OPTS);
+    await Promise.all([
+      SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY, STORE_OPTS),
+      SecureStore.deleteItemAsync(USER_MOBILE_KEY, STORE_OPTS),
+    ]);
   } catch {
     // Nothing to surface; the in-memory token is already cleared.
   }

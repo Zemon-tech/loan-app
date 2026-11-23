@@ -35,14 +35,14 @@ const SOFT: Record<BadgeStatus, AppColorRole> = {
   PARTIAL: 'warningSoft',
   OVERDUE: 'dangerSoft',
   DUE_TODAY: 'primarySoft',
-  UPCOMING: 'surface',
-  ACTIVE: 'primarySoft',
-  CLOSED: 'successSoft',
+  UPCOMING: 'mutedSurface',
+  ACTIVE: 'secondarySoft',
+  CLOSED: 'mutedSurface',
 };
 
 function roleFor(status: BadgeStatus): AppColorRole {
-  if (status === 'ACTIVE') return 'info';
-  if (status === 'CLOSED') return 'success';
+  if (status === 'ACTIVE') return 'secondary';
+  if (status === 'CLOSED') return 'textSecondary';
   return StatusColorRole[status];
 }
 

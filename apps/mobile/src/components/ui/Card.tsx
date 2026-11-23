@@ -20,10 +20,15 @@ export function Card({ style, tone = 'surface', children, ...rest }: CardProps) 
         {
           backgroundColor: tone === 'card' ? theme.colors.card : theme.colors.surface,
           borderRadius: theme.radius.lg,
-          borderWidth: StyleSheet.hairlineWidth,
+          borderWidth: 1,
           borderColor: theme.colors.border,
           padding: theme.spacing.lg,
           gap: theme.spacing.sm,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.04,
+          shadowRadius: 3,
+          elevation: 1,
         },
         style,
       ]}

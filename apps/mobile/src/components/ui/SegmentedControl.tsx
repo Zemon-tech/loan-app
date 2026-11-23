@@ -84,7 +84,9 @@ export function SegmentedControl<K extends string>({
         {
           padding: trackPadding,
           borderRadius: theme.radius.pill,
-          backgroundColor: theme.colors.primarySoft,
+          backgroundColor: theme.colors.mutedSurface,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
         },
       ]}
     >
@@ -97,12 +99,14 @@ export function SegmentedControl<K extends string>({
               top: trackPadding,
               bottom: trackPadding,
               borderRadius: theme.radius.pill,
-              backgroundColor: theme.colors.card,
+              backgroundColor: theme.colors.surface,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.08,
+              shadowOpacity: 0.05,
               shadowRadius: 2,
-              elevation: 2,
+              elevation: 1,
             },
             indicatorStyle,
           ]}
@@ -121,10 +125,10 @@ export function SegmentedControl<K extends string>({
           >
             <Text
               style={{
-                color: selected ? theme.colors.textPrimary : theme.colors.textSecondary,
+                color: selected ? theme.colors.secondary : theme.colors.textSecondary,
                 fontSize: theme.typography.size.body,
                 fontWeight: selected
-                  ? theme.typography.weight.semibold
+                  ? theme.typography.weight.bold
                   : theme.typography.weight.medium,
               }}
             >

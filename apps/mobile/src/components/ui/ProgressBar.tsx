@@ -51,9 +51,9 @@ export function ProgressBar({ ratio, color = 'primary', accessibilityLabel }: Pr
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ min: 0, max: 100, now: pct }}
       style={{
-        height: 8,
+        height: 6,
         borderRadius: theme.radius.pill,
-        backgroundColor: theme.colors.primarySoft,
+        backgroundColor: theme.colors.mutedSurface,
         overflow: 'hidden',
       }}
     >

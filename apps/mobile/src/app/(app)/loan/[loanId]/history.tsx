@@ -9,10 +9,18 @@
  */
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, SectionList, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  SectionList,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { formatINR as formatPaise } from '@app/shared';
+import { formatINR as formatPaise, type Paise } from '@app/shared';
 
 import { Icon, StateScroll, StateView } from '@/components/ui';
 import { formatDate, formatINR, formatMonthYear, monthKey } from '@/features/loans/format';
@@ -23,7 +31,7 @@ import {
   signedAmount,
 } from '@/features/loans/components/TransactionSheet';
 import { useLoanData, useTransactionsData } from '@/features/api/dataSource';
-import type { LoanDetailVM, TransactionVM, TransactionsPageVM } from '@/features/api/vm';
+import type { LoanDetailVM, TransactionVM } from '@/features/api/vm';
 import type { Transaction, TransactionType } from '@/features/loans/placeholderData';
 import { HistorySkeleton } from '@/features/system/components/Skeletons';
 import { LoadErrorState, NoTransactionsState, SupportSheet } from '@/features/system/components/SystemStates';
@@ -45,11 +53,12 @@ function netLabel(n: number): string {
 
 function vmToSheetTransaction(item: TransactionVM, index: number): Transaction {
   let tType: TransactionType = 'ADJUSTMENT';
-  if (item.type.includes('payment') || item.type.includes('advance') || item.type.includes('repayment')) {
+  const rawType = (item?.type || '').toLowerCase();
+  if (rawType.includes('payment') || rawType.includes('advance') || rawType.includes('repayment')) {
     tType = 'PAYMENT';
-  } else if (item.type.includes('fee') || item.type.includes('interest') || item.type.includes('charge') || item.type.includes('disbursed')) {
+  } else if (rawType.includes('fee') || rawType.includes('interest') || rawType.includes('charge') || rawType.includes('disbursed')) {
     tType = 'CHARGE';
-  } else if (item.type.includes('discount')) {
+  } else if (rawType.includes('discount')) {
     tType = 'DISCOUNT';
   }
 
@@ -96,15 +105,37 @@ export default function HistoryScreen() {
       </StateScroll>
     );
   }
-  if (txnQuery.data.transactions.length === 0) return <EmptyHistory />;
-  return <HistoryContent loanVM={loanQuery.data} pageVM={txnQuery.data} />;
+  if (txnQuery.data.transactions.length === 0) {
+    return <EmptyHistory onRefresh={txnQuery.refetch} isRefreshing={txnQuery.isRefreshing} />;
+  }
+  return (
+    <HistoryContent
+      loanVM={loanQuery.data}
+      txnData={txnQuery.data}
+      onEndReached={txnQuery.fetchNextPage}
+      hasNextPage={txnQuery.hasNextPage}
+      isFetchingNextPage={txnQuery.isFetchingNextPage}
+      onRefresh={txnQuery.refetch}
+      isRefreshing={txnQuery.isRefreshing}
+    />
+  );
 }
 
-function EmptyHistory() {
+function EmptyHistory({ onRefresh, isRefreshing }: { onRefresh: () => void; isRefreshing: boolean }) {
   const theme = useAppTheme();
   const [helpOpen, setHelpOpen] = useState(false);
   return (
-    <StateScroll>
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1, padding: theme.spacing.lg, gap: theme.spacing.lg }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          tintColor={theme.colors.primary}
+          colors={[theme.colors.primary]}
+        />
+      }
+    >
       <NoTransactionsState onHelp={() => setHelpOpen(true)} />
       <View style={{ flexDirection: 'row', gap: theme.spacing.md, paddingHorizontal: theme.spacing.xs }}>
         <Icon name="information-circle-outline" size={18} color="textSecondary" />
@@ -113,11 +144,34 @@ function EmptyHistory() {
         </Text>
       </View>
       <SupportSheet visible={helpOpen} onClose={() => setHelpOpen(false)} />
-    </StateScroll>
+    </ScrollView>
   );
 }
 
-function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: TransactionsPageVM }) {
+interface HistoryContentProps {
+  loanVM: LoanDetailVM;
+  txnData: {
+    transactions: TransactionVM[];
+    totalCreditPaise: Paise;
+    totalDebitPaise: Paise;
+    totalCount: number;
+  };
+  onEndReached: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+}
+
+function HistoryContent({
+  loanVM,
+  txnData,
+  onEndReached,
+  hasNextPage,
+  isFetchingNextPage,
+  onRefresh,
+  isRefreshing,
+}: HistoryContentProps) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<TypeFilter>('ALL');
@@ -126,7 +180,7 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
 
   // Convert VMs to SectionList format
   const { sections, total } = useMemo(() => {
-    const sheetItems = pageVM.transactions.map((t, idx) => vmToSheetTransaction(t, idx));
+    const sheetItems = txnData.transactions.map((t, idx) => vmToSheetTransaction(t, idx));
     const all = sheetItems
       .filter((t) => filter === 'ALL' || t.type === filter)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -137,7 +191,7 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
       map.get(k)!.data.push(t);
     }
     return { sections: [...map.values()], total: all.length };
-  }, [pageVM, filter]);
+  }, [txnData, filter]);
 
   const keyExtractor = useCallback((t: Transaction) => t.id, []);
 
@@ -178,7 +232,8 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
 
   const renderItem = useCallback(
     ({ item, index, section }: { item: Transaction; index: number; section: { data: Transaction[] } }) => {
-      const s = TXN_STYLE[item.type];
+      if (!item) return null;
+      const s = TXN_STYLE[item.type] ?? TXN_STYLE.ADJUSTMENT;
       const first = index === 0;
       const last = index === section.data.length - 1;
       const icon = item.type === 'PAYMENT' && item.mode === 'Cash' ? 'cash-outline' : s.icon;
@@ -264,7 +319,9 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
             flex: 1,
             padding: theme.spacing.md,
             borderRadius: theme.radius.md,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
             gap: 2,
           }}
         >
@@ -272,7 +329,7 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
             TOTAL CREDITED
           </Text>
           <Text style={{ color: theme.colors.success, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
-            +{formatPaise(pageVM.totalCreditPaise)}
+            +{formatPaise(txnData.totalCreditPaise)}
           </Text>
         </View>
         <View
@@ -280,7 +337,9 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
             flex: 1,
             padding: theme.spacing.md,
             borderRadius: theme.radius.md,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
             gap: 2,
           }}
         >
@@ -288,7 +347,7 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
             TOTAL DEBITED
           </Text>
           <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
-            {formatPaise(pageVM.totalDebitPaise)}
+            {formatPaise(txnData.totalDebitPaise)}
           </Text>
         </View>
       </View>
@@ -316,15 +375,17 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
                   minHeight: 40,
                   paddingHorizontal: theme.spacing.lg,
                   borderRadius: theme.radius.pill,
-                  backgroundColor: isSelected ? theme.colors.textPrimary : theme.colors.card,
+                  backgroundColor: isSelected ? theme.colors.secondary : theme.colors.surface,
+                  borderWidth: 1,
+                  borderColor: isSelected ? theme.colors.secondary : theme.colors.border,
                 }}
               >
                 {f.key === 'ALL' ? (
-                  <Icon name="options-outline" size={16} color={isSelected ? 'background' : 'textSecondary'} />
+                  <Icon name="options-outline" size={16} color={isSelected ? 'onSecondary' : 'textSecondary'} />
                 ) : null}
                 <Text
                   style={{
-                    color: isSelected ? theme.colors.background : theme.colors.textSecondary,
+                    color: isSelected ? theme.colors.onSecondary : theme.colors.textSecondary,
                     fontSize: theme.typography.size.caption,
                     fontWeight: theme.typography.weight.semibold,
                   }}
@@ -354,6 +415,18 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
         removeClippedSubviews
         renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) onEndReached();
+        }}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
         contentContainerStyle={{ paddingBottom: insets.bottom + theme.spacing.xl }}
         ListEmptyComponent={
           <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.body, padding: theme.spacing.xl }}>
@@ -361,11 +434,16 @@ function HistoryContent({ loanVM, pageVM }: { loanVM: LoanDetailVM; pageVM: Tran
           </Text>
         }
         ListFooterComponent={
-          <View style={{ flexDirection: 'row', gap: theme.spacing.md, padding: theme.spacing.lg }}>
-            <Icon name="information-circle-outline" size={18} color="textSecondary" />
-            <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, lineHeight: 20 }}>
-              Historical records only. Payments are not made in this app.
-            </Text>
+          <View style={{ gap: theme.spacing.sm, padding: theme.spacing.lg }}>
+            {isFetchingNextPage ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} style={{ paddingVertical: theme.spacing.sm }} />
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+              <Icon name="information-circle-outline" size={18} color="textSecondary" />
+              <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, lineHeight: 20 }}>
+                Historical records only. Payments are not made in this app.
+              </Text>
+            </View>
           </View>
         }
       />

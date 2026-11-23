@@ -12,7 +12,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatDate as formatIsoDate, formatINR as formatPaise, type PayFrequency } from '@app/shared';
@@ -63,13 +63,28 @@ export default function LoanOverviewScreen() {
       </StateScroll>
     );
   }
-  return <OverviewContent vm={query.data} loanId={loanId ?? ''} />;
+  return <OverviewContent vm={query.data} loanId={loanId ?? ''} refetch={query.refetch} />;
 }
 
-function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
+function OverviewContent({
+  vm,
+  loanId,
+  refetch,
+}: {
+  vm: LoanDetailVM;
+  loanId: string;
+  refetch: () => void;
+}) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const [detailsOpen, setDetailsOpen] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   // Mock-only rich cards still read the placeholder Loan directly (retained for review).
   const mockLoan = SHOW_MOCK_CARDS ? findPlaceholderLoan(loanId) : undefined;
@@ -111,11 +126,24 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
         paddingBottom: insets.bottom + theme.spacing.xl,
         gap: theme.spacing.lg,
       }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={theme.colors.primary}
+          colors={[theme.colors.primary]}
+        />
+      }
     >
       {/* Hero: account, status, outstanding */}
-      <Card tone="card" style={cardStyle}>
+      <Card
+        tone="card"
+        style={{
+          ...cardStyle,
+        }}
+      >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-          <IconTile name="briefcase-outline" size={40} background="primarySoft" />
+          <IconTile name="briefcase-outline" size={40} background="secondarySoft" color="secondary" />
           <View style={{ flex: 1 }}>
             <Text style={caps}>Account {vm.accountNumber}</Text>
             {SHOW_MOCK_CARDS && mockLoan ? (
@@ -147,8 +175,21 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
           </View>
         </View>
 
-        {/* EMIs-paid progress bar (mock or when numberOfInstallments is present) */}
-        {SHOW_MOCK_CARDS && mockLoan ? <MockProgress loan={mockLoan} /> : null}
+        {/* EMIs-paid progress bar (wire-backed when numberOfInstallments is present, or mock fallback) */}
+        {vm.numberOfInstallments && vm.numberOfInstallments > 0 ? (
+          <LoanProgress
+            totalEmis={vm.numberOfInstallments}
+            emisPaid={
+              vm.status === 'CLOSED'
+                ? vm.numberOfInstallments
+                : vm.emiAmountPaise > 0
+                  ? Math.min(vm.numberOfInstallments, Math.floor(vm.totalPaidPaise / vm.emiAmountPaise))
+                  : 0
+            }
+          />
+        ) : SHOW_MOCK_CARDS && mockLoan ? (
+          <LoanProgress totalEmis={mockLoan.totalEmis} emisPaid={mockLoan.emisPaid} />
+        ) : null}
       </Card>
 
       {/* Overdue warning banner with installment count */}
@@ -368,24 +409,26 @@ function OverviewContent({ vm, loanId }: { vm: LoanDetailVM; loanId: string }) {
 
 /* ----------------------- Mock-only sub-views (retained) ----------------------- */
 
-function MockProgress({ loan }: { loan: Loan }) {
+function LoanProgress({ totalEmis, emisPaid }: { totalEmis: number; emisPaid: number }) {
   const theme = useAppTheme();
-  const remaining = loan.totalEmis - loan.emisPaid;
-  const percent = Math.round((loan.emisPaid / loan.totalEmis) * 100);
+  const safeTotal = Math.max(1, totalEmis);
+  const clampedPaid = Math.min(safeTotal, Math.max(0, emisPaid));
+  const remaining = safeTotal - clampedPaid;
+  const percent = Math.round((clampedPaid / safeTotal) * 100);
   return (
     <View style={{ gap: theme.spacing.xs }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
           <Icon name="pie-chart-outline" size={16} color="primary" />
           <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.medium }}>
-            {loan.emisPaid} of {loan.totalEmis} EMIs paid
+            {clampedPaid} of {safeTotal} EMIs paid
           </Text>
         </View>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
           {percent}% completed {'\u2022'} {remaining} left
         </Text>
       </View>
-      <ProgressBar ratio={loan.emisPaid / loan.totalEmis} accessibilityLabel={`${loan.emisPaid} of ${loan.totalEmis} EMIs paid`} />
+      <ProgressBar ratio={clampedPaid / safeTotal} accessibilityLabel={`${clampedPaid} of ${safeTotal} EMIs paid`} />
     </View>
   );
 }
@@ -557,10 +600,14 @@ function SectionHeading({ icon, title }: { icon: IconName; title: string }) {
   const theme = useAppTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-      <IconTile name={icon} size={32} background="surface" color="primary" />
+      <Icon name={icon} size={20} color="secondary" />
       <Text
         accessibilityRole="header"
-        style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.bold }}
+        style={{
+          color: theme.colors.textPrimary,
+          fontSize: theme.typography.size.body + 1,
+          fontWeight: theme.typography.weight.bold,
+        }}
       >
         {title}
       </Text>
@@ -579,18 +626,20 @@ function DetailRow({ label, value, shaded, highlight }: { label: string; value: 
         gap: theme.spacing.lg,
         minHeight: 40,
         paddingVertical: theme.spacing.sm,
-        paddingHorizontal: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
         borderRadius: theme.radius.sm,
-        backgroundColor: shaded ? theme.colors.canvas : 'transparent',
+        backgroundColor: shaded ? theme.colors.mutedSurface : 'transparent',
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
       }}
     >
-      <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>{label}</Text>
+      <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption + 1 }}>{label}</Text>
       <Text
         style={{
           flex: 1,
           textAlign: 'right',
           color: highlight ? theme.colors.success : theme.colors.textPrimary,
-          fontSize: theme.typography.size.caption + 1,
+          fontSize: theme.typography.size.body,
           fontWeight: theme.typography.weight.semibold,
         }}
       >
@@ -616,7 +665,17 @@ function AmountRow({
   const theme = useAppTheme();
   const color = tone ? theme.colors[tone] : theme.colors.textPrimary;
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 36, gap: theme.spacing.md }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        minHeight: 38,
+        paddingVertical: 2,
+        paddingHorizontal: theme.spacing.xs,
+        gap: theme.spacing.md,
+      }}
+    >
       <Text
         style={{
           flex: 1,
@@ -630,8 +689,8 @@ function AmountRow({
       <Text
         style={{
           color,
-          fontSize: theme.typography.size.caption + 1,
-          fontWeight: bold ? theme.typography.weight.bold : theme.typography.weight.medium,
+          fontSize: bold ? theme.typography.size.body : theme.typography.size.caption + 1,
+          fontWeight: bold ? theme.typography.weight.bold : theme.typography.weight.semibold,
         }}
       >
         {prefix ? `${prefix} ` : ''}

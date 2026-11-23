@@ -7,14 +7,29 @@
     "icon": "./assets/images/icon.png",
     "scheme": "loantracker",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fddc69"
+    },
     "ios": {
       "bundleIdentifier": "com.example.loanapp",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#fddc69"
+      }
     },
     "android": {
       "package": "com.example.loanapp",
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#fddc69"
+      },
       "adaptiveIcon": {
-        "backgroundColor": "#081120",
+        "backgroundColor": "#fddc69",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
@@ -28,7 +43,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#081120",
+          "backgroundColor": "#fddc69",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200
         }

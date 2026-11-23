@@ -6,7 +6,7 @@
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
-import { BrandMark, Icon, SegmentedControl, StatusBadge } from '@/components/ui';
+import { Icon, SegmentedControl } from '@/components/ui';
 import { useLoanData } from '@/features/api/dataSource';
 import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
@@ -65,44 +65,37 @@ export function WorkspaceHeader({
         backgroundColor: theme.colors.canvas,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back to Home"
-          hitSlop={8}
-          onPress={goBackOrHome}
-          style={({ pressed }) => ({
-            width: theme.touchTarget.min,
-            height: theme.touchTarget.min,
-            marginLeft: -theme.spacing.sm,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: pressed ? 0.6 : 1,
-          })}
-        >
-          <Icon name="chevron-back" size={26} color="textPrimary" />
-        </Pressable>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, flex: 1 }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back to Home"
+            hitSlop={8}
+            onPress={goBackOrHome}
+            style={({ pressed }) => ({
+              width: theme.touchTarget.min,
+              height: theme.touchTarget.min,
+              marginLeft: -theme.spacing.sm,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Icon name="chevron-back" size={26} color="textPrimary" />
+          </Pressable>
 
-        <BrandMark size={32} />
-
-        <View style={{ flex: 1, gap: 2 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: theme.spacing.sm }}>
-            <Text
-              accessibilityRole="header"
-              style={{
-                color: theme.colors.textPrimary,
-                fontSize: theme.typography.size.subtitle,
-                fontWeight: theme.typography.weight.bold,
-              }}
-            >
-              {TITLES[segment]}
-            </Text>
-            {status ? (
-              <StatusBadge
-                status={status === 'OVERDUE' ? 'OVERDUE' : status === 'CLOSED' ? 'CLOSED' : 'ACTIVE'}
-              />
-            ) : null}
-          </View>
+          <Text
+            accessibilityRole="header"
+            numberOfLines={1}
+            style={{
+              color: theme.colors.textPrimary,
+              fontSize: theme.typography.size.subtitle,
+              fontWeight: theme.typography.weight.bold,
+              flexShrink: 1,
+            }}
+          >
+            {TITLES[segment]}
+          </Text>
         </View>
       </View>
 

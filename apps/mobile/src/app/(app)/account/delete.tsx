@@ -38,8 +38,8 @@ type Step = 'review' | 'verify' | 'done';
 
 const RESEND_SECONDS = 30;
 
-// Account screens are hidden in all modes (Profile removed) — retained but unreachable.
-const SHOW_ACCOUNT = false;
+// Account deletion screen.
+const SHOW_ACCOUNT = true;
 
 export default function DeleteAccountScreen() {
   const theme = useAppTheme();

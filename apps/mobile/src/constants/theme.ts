@@ -38,65 +38,85 @@ export const Fonts = Platform.select({
 // ============================================================================
 
 /**
- * Brand palette (ink black / deep space blue / blue slate / dusty denim / eggshell).
- * Raw swatches only — components must use the semantic roles in `AppColors`, never these.
+ * Professional NBFC Financial Palette (PRD Section 6.4 + Redesign Spec).
+ * Primary Yellow (#F4C444), Secondary Teal (#4C98A8), Interactive Blue (#3478F4),
+ * Danger Red (#C8444C), Success Green (#2FA45A).
+ * Neutrals: Background (#F8F8F8), Surface (#FFFFFF), Border (#E0E0E0),
+ * Primary Text (#333333), Secondary Text (#787878), Muted Surface (#F2F3F4).
  */
 const Palette = {
-  ink: { 500: '#0d1321' },
-  deepSpace: { 400: '#172436', 500: '#1d2d44' },
-  slate: { 300: '#253746', 500: '#3e5c76', 700: '#7d9eba' },
-  denim: { 300: '#40536b', 600: '#8fa2bc', 700: '#abb9cd', 800: '#c7d1dd', 900: '#e3e8ee' },
-  eggshell: { 500: '#f0ebd8', 700: '#f6f2e7', 800: '#f9f7ef', 900: '#fcfbf7' },
+  yellow: { primary: '#F4C444', soft: '#FDF7E7', dark: '#C89B1E' },
+  teal: { secondary: '#4C98A8', soft: '#EDF5F7', dark: '#37737F' },
+  blue: { interactive: '#3478F4', soft: '#EBF2FE', dark: '#1F5BD1' },
+  red: { danger: '#C8444C', soft: '#FCEEED', dark: '#A42A31' },
+  green: { success: '#2FA45A', soft: '#EBF7EE', dark: '#227C44' },
+  amber: { warning: '#E0981E', soft: '#FEF7E8', dark: '#B5740E' },
+  neutral: {
+    bg: '#F8F8F8',
+    surface: '#FFFFFF',
+    border: '#E0E0E0',
+    textPrimary: '#333333',
+    textSecondary: '#787878',
+    mutedSurface: '#F2F3F4',
+  },
 } as const;
 
 /**
- * Semantic colour roles (11 core + 6 surface tints), light + dark. Follows the system setting.
- * Status colours (success / warning / danger + soft tints) are intentionally NOT from the brand
- * palette: they must stay recognisable green / amber / red (always paired with a label + icon).
+ * Semantic colour roles, light + dark. Follows the system setting.
+ * High-contrast, authoritative, accessible financial management theme.
  */
 export const AppColors = {
   light: {
-    primary: Palette.deepSpace[500], // buttons, brand mark, selected states, links
-    onPrimary: Palette.eggshell[500], // text/icons on primary (≈11.6:1)
-    background: Palette.eggshell[800], // default screen tone; also inverse text on primary chips
-    surface: Palette.eggshell[500], // neutral blocks (e.g. collapsed closed-loans)
-    textPrimary: Palette.ink[500],
-    textSecondary: Palette.denim[300], // ≥6.6:1 on every light surface
-    border: Palette.denim[800],
-    success: '#16A34A',
-    warning: '#D97706',
-    danger: '#DC2626',
-    info: Palette.slate[500],
-    // Auth / entry surfaces: warm eggshell page tint, lighter card, cool soft tint.
-    canvas: Palette.eggshell[700],
-    card: Palette.eggshell[900],
-    primarySoft: Palette.denim[900], // icon tiles, stat boxes, selected rows
-    successSoft: '#DCFCE7',
-    dangerSoft: '#FDECEC',
-    warningSoft: '#FEF3C7',
+    primary: Palette.yellow.primary, // Dominant brand accent, highlights, primary action cards
+    onPrimary: '#1A1A1A', // Dark text on yellow (contrast > 11:1)
+    secondary: Palette.teal.secondary, // Secondary navigation tabs, categories, accents
+    onSecondary: '#FFFFFF', // White text on teal
+    interactive: Palette.blue.interactive, // Links, interactive elements, navigation markers
+    background: Palette.neutral.bg, // Main app background #F8F8F8
+    surface: Palette.neutral.surface, // Cards, tables, panels #FFFFFF
+    card: Palette.neutral.surface, // Surface container #FFFFFF
+    canvas: Palette.neutral.bg, // Canvas tint #F8F8F8
+    border: Palette.neutral.border, // Dividers, table borders #E0E0E0
+    textPrimary: Palette.neutral.textPrimary, // Headings & important content #333333
+    textSecondary: Palette.neutral.textSecondary, // Supporting information #787878
+    mutedSurface: Palette.neutral.mutedSurface, // Search fields, table headers, subtle backdrops #F2F3F4
+    success: Palette.green.success, // Successful payments, positive indicators #2FA45A
+    successSoft: Palette.green.soft, // Soft green tint #EBF7EE
+    danger: Palette.red.danger, // NPA, critical statuses, alerts, overdue #C8444C
+    dangerSoft: Palette.red.soft, // Soft red alert tint #FCEEED
+    warning: Palette.amber.warning, // Warning & partial statuses
+    warningSoft: Palette.amber.soft, // Soft amber tint
+    info: Palette.blue.interactive, // Informational #3478F4
+    primarySoft: Palette.yellow.soft, // Soft yellow highlight banner #FDF7E7
+    secondarySoft: Palette.teal.soft, // Soft teal tint #EDF5F7
   },
   dark: {
-    primary: Palette.denim[600],
-    onPrimary: Palette.ink[500], // ≈7:1 on primary
-    background: Palette.ink[500],
-    surface: Palette.deepSpace[400],
-    textPrimary: Palette.eggshell[500],
-    textSecondary: Palette.denim[700],
-    border: Palette.slate[300],
-    success: '#22C55E',
-    warning: '#F59E0B',
-    danger: '#EF4444',
-    info: Palette.slate[700],
-    canvas: Palette.ink[500],
-    card: Palette.deepSpace[400],
-    primarySoft: Palette.deepSpace[500],
-    successSoft: '#0F2A1A',
-    dangerSoft: '#2A1416',
-    warningSoft: '#2B2110',
+    primary: Palette.yellow.primary,
+    onPrimary: '#1A1A1A',
+    secondary: '#5EAFC0',
+    onSecondary: '#121212',
+    interactive: '#4D8DFE',
+    background: '#121212',
+    surface: '#1E1E1E',
+    card: '#1E1E1E',
+    canvas: '#121212',
+    border: '#2E2E2E',
+    textPrimary: '#EDEDED',
+    textSecondary: '#A0A0A0',
+    mutedSurface: '#252525',
+    success: '#34C759',
+    successSoft: '#14291A',
+    danger: '#E0535B',
+    dangerSoft: '#2C1416',
+    warning: '#F5A623',
+    warningSoft: '#2D200E',
+    info: '#4D8DFE',
+    primarySoft: '#2C2616',
+    secondarySoft: '#142629',
   },
 } as const;
 
-/** Spacing scale (PRD 6.4: 4 / 8 / 12 / 16 / 24 / 32). */
+/** Spacing scale (4 / 8 / 12 / 16 / 24 / 32). */
 export const AppSpacing = {
   xs: 4,
   sm: 8,
@@ -107,24 +127,33 @@ export const AppSpacing = {
 } as const;
 
 export const AppRadius = {
-  sm: 6,
+  sm: 4,
   md: 8,
   lg: 12,
-  xl: 20,
+  xl: 16,
   pill: 999,
 } as const;
 
 /**
- * Typography. System font, scalable. Minimum body size 16 (PRD 6.4).
- * Respect OS font scaling up to 200% — do not disable `allowFontScaling`.
+ * Typography hierarchy as specified in the redesign specification:
+ * - Page title: 24–30px, semibold
+ * - Section title: 18–22px, semibold
+ * - Table headers: 15–17px, bold
+ * - Body text: 14–16px, regular
+ * - Important values: 16–18px, semibold
+ * - Supporting text: 12–14px, regular
+ * - Metadata: 11–12px, regular
  */
 export const AppTypography = {
   size: {
+    metadata: 12,
     caption: 13,
-    body: 16, // minimum body size
-    subtitle: 18,
-    title: 22,
-    heading: 28,
+    body: 15,
+    important: 17,
+    tableHeader: 16,
+    subtitle: 20,
+    title: 26,
+    heading: 30,
   },
   weight: {
     regular: '400',
