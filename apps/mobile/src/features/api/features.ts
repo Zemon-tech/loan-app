@@ -6,7 +6,7 @@
  * (as of the 2026-11-18 contract update).
  */
 
-/** True when the schedule / history / profile screens should be reachable. */
+/** True when the history / profile screens should be reachable. */
 export function showUnbackedScreens(): boolean {
   return true;
 }

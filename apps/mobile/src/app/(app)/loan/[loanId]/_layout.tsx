@@ -15,8 +15,8 @@ import { useAppTheme } from '@/hooks/use-theme';
 const SHOW_SUB_SCREENS = showUnbackedScreens();
 
 /**
- * Loan Workspace: one shared header + segmented control (Overview | Schedule | History)
- * above whichever segment is active, so the three screens feel like a single place.
+ * Loan Workspace: one shared header + segmented control (Overview | History)
+ * above whichever segment is active, so the two screens feel like a single place.
  * The tab bar is hidden for this route (see (app)/_layout.tsx).
  */
 export default function LoanWorkspaceLayout() {
@@ -26,13 +26,9 @@ export default function LoanWorkspaceLayout() {
   const { loanId } = useLocalSearchParams<{ loanId: string }>();
   const pathname = usePathname();
 
-  const segment: WorkspaceSegment = pathname.endsWith('/schedule')
-    ? 'schedule'
-    : pathname.endsWith('/history')
-      ? 'history'
-      : 'overview';
+  const segment: WorkspaceSegment = pathname.endsWith('/history') ? 'history' : 'overview';
 
-  // Live mode: schedule/history have no wire source — a direct deep link redirects to overview.
+  // History is hidden when the sub-screens flag is off — a direct deep link redirects to overview.
   if (!SHOW_SUB_SCREENS && segment !== 'overview') {
     return <Redirect href={{ pathname: '/loan/[loanId]', params: { loanId: loanId ?? '' } }} />;
   }

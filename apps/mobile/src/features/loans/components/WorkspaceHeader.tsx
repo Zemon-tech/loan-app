@@ -1,5 +1,5 @@
 /**
- * WorkspaceHeader — shared header for Overview | Schedule | History.
+ * WorkspaceHeader — shared header for Overview | History.
  * Back button, account + title, status badge, and the segmented navigation.
  * Rendered once by the workspace layout so it stays put while the segment content changes.
  */
@@ -15,17 +15,15 @@ import type { Loan } from '../placeholderData';
 
 const SHOW_SEGMENTS = showUnbackedScreens();
 
-export type WorkspaceSegment = 'overview' | 'schedule' | 'history';
+export type WorkspaceSegment = 'overview' | 'history';
 
 const TITLES: Record<WorkspaceSegment, string> = {
-  overview: 'Loan Overview',
-  schedule: 'Repayment Schedule',
+  overview: 'Loan overview',
   history: 'Transaction History',
 };
 
 const OPTIONS: { key: WorkspaceSegment; label: string }[] = [
   { key: 'overview', label: 'Overview' },
-  { key: 'schedule', label: 'Schedule' },
   { key: 'history', label: 'History' },
 ];
 
@@ -52,7 +50,6 @@ export function WorkspaceHeader({
   function onChange(next: WorkspaceSegment) {
     // Replace (not push) so Back always returns to Home, not through the segments.
     if (next === 'overview') router.replace({ pathname: '/loan/[loanId]', params: { loanId } });
-    else if (next === 'schedule') router.replace({ pathname: '/loan/[loanId]/schedule', params: { loanId } });
     else router.replace({ pathname: '/loan/[loanId]/history', params: { loanId } });
   }
 

@@ -252,7 +252,7 @@ export default function DeleteAccountScreen() {
       </Card>
 
       <Point icon="person-remove-outline" fg="danger" bg="dangerSoft" title="Application access will be permanently revoked" titleColor="danger">
-        You will no longer be able to log in or inspect your loan schedules using this mobile app.
+        You will no longer be able to log in or view your loan details using this mobile app.
       </Point>
       <Point icon="scale-outline" fg="textSecondary" bg="primarySoft" title="Active loan obligations remain legally binding">
         {`Deleting this mobile app profile does NOT cancel, waive, or close any active loans or EMI repayment obligations with ${PLACEHOLDER_LENDER.legalName}`}

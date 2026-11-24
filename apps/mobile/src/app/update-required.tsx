@@ -37,7 +37,7 @@ export default function UpdateRequiredScreen() {
           </Text>
           <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 }}>
             {update
-              ? `A mandatory security and performance update (v${update.latestVersion}) is required to safely access your loan schedules and transaction history.`
+              ? `A mandatory security and performance update (v${update.latestVersion}) is required to safely access your loan details and transaction history.`
               : 'A mandatory update is required to continue.'}
           </Text>
         </View>

@@ -1,5 +1,5 @@
 /**
- * SegmentedControl — equal-width tabs in a soft track (Overview | Schedule | History).
+ * SegmentedControl — equal-width tabs in a soft track (Overview | History).
  * Features a smoothly sliding indicator pill driven by Reanimated spring physics
  * and tactile selection haptic feedback.
  */
@@ -125,7 +125,7 @@ export function SegmentedControl<K extends string>({
           >
             <Text
               style={{
-                color: selected ? theme.colors.secondary : theme.colors.textSecondary,
+                color: selected ? theme.colors.textPrimary : theme.colors.textSecondary,
                 fontSize: theme.typography.size.body,
                 fontWeight: selected
                   ? theme.typography.weight.bold

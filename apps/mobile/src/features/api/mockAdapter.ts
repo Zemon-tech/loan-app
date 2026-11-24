@@ -43,6 +43,7 @@ export function mockLoanToListItemVM(loan: Loan): LoanListItemVM {
     emiAmountPaise: paise(loan.emiAmount),
     outstandingPaise: paise(loan.outstanding),
     overdueAmountPaise,
+    nextDueDate: loan.nextDue ? dateToIsoDate(loan.nextDue.date) : null,
   };
 }
 

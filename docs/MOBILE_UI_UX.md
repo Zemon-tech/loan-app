@@ -60,7 +60,7 @@ iOS, so headers slid under the Android status bar).
 | `Button` | `primary`, `secondary`, `danger`, `ghost`; left/right icons; loading |
 | `Card`, `IconTile`, `Pill`, `StatusBadge`, `ProgressBar`, `BrandMark`, `Icon` | Building blocks |
 | `OtpInput` | 6 cells, one hidden input, SMS autofill, `hasError`, `disabled` |
-| `SegmentedControl` | Overview / Schedule / History |
+| `SegmentedControl` | Overview / History |
 | `SettingsGroup`, `SettingsRow`, `SectionLabel`, `Toggle` | Profile and Settings lists, 48x28 switch with check |
 | `BottomSheet`, `ConfirmSheet`, `OptionRow` | Sheets on RN `Modal` (no extra dependency) |
 | `Skeleton`, `SkeletonGroup` | Loading placeholders (reduce-motion aware) |
@@ -80,7 +80,7 @@ iOS, so headers slid under the Android status bar).
 (app)/loans           Home tab
 (app)/account         Profile tab
 (app)/account/settings | help | legal | delete        (no tab bar)
-(app)/loan/[loanId]   Workspace: index (Overview) | schedule | history   (no tab bar)
+(app)/loan/[loanId]   Workspace: index (Overview) | history   (no tab bar)
 ```
 
 Boot order (`app/index.tsx`): maintenance → update required → login → unlock (if App Lock on and
@@ -105,11 +105,9 @@ EMIs paid" + bar, Next due, Overdue, chevron). Closed loans sit in a quiet colla
 Works for one loan, several, active + closed, and all closed.
 
 **Loan workspace** (one shared header + segmented control, tab bar hidden)
-- **Overview:** outstanding hero, overdue warning (informational), next due, collapsible loan details,
-  full amount breakdown (every charge on its own line, zeros shown), paid so far (online/cash), optional
-  Key Facts (only when present), disclaimer.
-- **Schedule:** context bar with "Jump to #N", summary tiles, All/Paid/Pending/Overdue filters, month
-  groups with sticky headers, opens on the next due EMI.
+- **Overview:** hero (account, status, outstanding, EMIs-paid progress), overdue banner (informational),
+  Next collection + Last payment tiles, Dues & charges breakdown with totals, then settlement /
+  disbursal / loan specifications when present, disclaimer. **No Schedule screen** (removed 2026-11-20).
 - **History:** type filter + record count, month groups with net amount, tap opens the receipt sheet.
 
 **Profile ecosystem:** Profile (identity, links, lender info, log out), Settings (App Lock, Auto-Lock
@@ -118,7 +116,7 @@ Grievance Redressal Officer), Legal (lender documents, in-app browser), Delete a
 (review → verify by biometrics or OTP → "Request received" with copyable acknowledgement ID).
 Sheets: Log out, App Lock on/off confirmation, Language, Auto-lock interval.
 
-**System states:** skeletons for Home, Overview, Schedule and History (same structure as the real
+**System states:** skeletons for Home, Overview and History (same structure as the real
 screens); No loans; No transactions (with help sheet); Load error (friendly, "Try again"); Offline
 banner (calm, persistent in Home and the workspace); Session expired.
 
@@ -192,7 +190,6 @@ New dependencies added with `npx expo install`: `@expo/vector-icons`, `expo-loca
 - `GET /v1/config` for lender details, support contacts, legal URLs, store URLs and version gates.
 - i18n for all strings (Hindi is label-only today). Persist preferences.
 - Notifications are a Phase 2 toggle and do nothing yet.
-- Replace Schedule's `FlatList` with FlashList for ~600 rows. Add infinite scroll and pull-to-refresh.
 - Single-loan shortcut (open the workspace directly for exactly one loan) is documented, not built.
 - Delete account should call `DELETE /v1/me` and verify the OTP for real.
 

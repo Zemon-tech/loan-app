@@ -8,9 +8,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAppTheme } from '@/hooks/use-theme';
+import { FloatingTabBar } from '@/components/ui/FloatingTabBar';
 
 // Profile tab is backed by the live /api/v1/me endpoint.
 const SHOW_PROFILE_TAB = true;
@@ -61,31 +60,17 @@ function TabIcon({
  * Main Tabs navigator for the two primary destinations: Home (loans) and Profile (account).
  */
 export default function TabsLayout() {
-  const theme = useAppTheme();
-  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
       backBehavior="history"
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: theme.colors.secondary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
-        tabBarLabelStyle: { fontSize: theme.typography.size.caption, fontWeight: '600', marginTop: 2 },
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
-          borderTopWidth: 1,
-          height: 60 + insets.bottom,
-          paddingTop: theme.spacing.sm,
-          paddingBottom: Math.max(insets.bottom, theme.spacing.sm),
-        },
-      }}
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen
         name="loans"
         options={{
-          title: 'Home',
+          title: 'Loans',
           headerShown: false,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon

@@ -1,5 +1,5 @@
 /**
- * Skeleton versions of Home, Loan Overview, Schedule and History.
+ * Skeleton versions of Home, Loan Overview and History.
  * Each mirrors the real screen's structure (same cards, rows and spacing) so nothing jumps
  * when data arrives.
  */
@@ -140,21 +140,19 @@ export function OverviewSkeleton() {
           </Row>
         </SkCard>
 
-        <SkCard>
-          <Row>
-            <Skeleton width={32} height={32} radius={10} />
-            <Skeleton width={110} height={16} />
-          </Row>
-          {[0, 1, 2, 3].map((i) => (
-            <Row key={i}>
-              <Skeleton width={120} height={13} />
-              <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                <Skeleton width={110} height={13} />
-              </View>
-            </Row>
+        <Row gap={12}>
+          {[0, 1].map((i) => (
+            <View key={i} style={{ flex: 1 }}>
+              <SkCard>
+                <Row>
+                  <Skeleton width={36} height={36} radius={11} />
+                  <Skeleton width={70} height={11} />
+                </Row>
+                <Skeleton width={100} height={20} />
+              </SkCard>
+            </View>
           ))}
-        </SkCard>
-
+        </Row>
         <SkCard>
           <Skeleton width={190} height={16} />
           {[0, 1, 2, 3, 4].map((i) => (
@@ -172,55 +170,6 @@ export function OverviewSkeleton() {
         </SkCard>
       </SkeletonGroup>
     </ScrollView>
-  );
-}
-
-/* ------------------------------ Schedule ------------------------------ */
-
-export function ScheduleSkeleton() {
-  const theme = useAppTheme();
-  return (
-    <SkeletonGroup label="Loading repayment schedule" style={{ flex: 1, gap: theme.spacing.md }}>
-      <View style={{ paddingHorizontal: theme.spacing.lg }}>
-        <Skeleton height={52} radius={theme.radius.lg} />
-      </View>
-      <Row gap={8}>
-        <View style={{ width: theme.spacing.lg - 8 }} />
-        {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={{ flex: 1 }}>
-            <Skeleton height={68} radius={theme.radius.lg} />
-          </View>
-        ))}
-        <View style={{ width: theme.spacing.lg - 8 }} />
-      </Row>
-      <Row gap={8}>
-        <View style={{ width: theme.spacing.lg - 8 }} />
-        {[64, 92, 92, 92].map((w, i) => (
-          <Skeleton key={i} width={w} height={40} radius={theme.radius.pill} />
-        ))}
-      </Row>
-      <View style={{ paddingHorizontal: theme.spacing.lg, gap: theme.spacing.sm }}>
-        <Row>
-          <Skeleton width={150} height={18} />
-          <Skeleton width={90} height={20} radius={10} />
-        </Row>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <SkCard key={i} gap={10}>
-            <Row>
-              <View style={{ flex: 1, gap: 8 }}>
-                <Row>
-                  <Skeleton width={70} height={16} />
-                  <Skeleton width={76} height={22} radius={11} />
-                </Row>
-                <Skeleton width={110} height={11} />
-              </View>
-              <Skeleton width={64} height={18} />
-            </Row>
-            <Skeleton width="70%" height={11} />
-          </SkCard>
-        ))}
-      </View>
-    </SkeletonGroup>
   );
 }
 

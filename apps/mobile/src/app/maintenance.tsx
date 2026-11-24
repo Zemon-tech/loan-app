@@ -69,7 +69,7 @@ export default function MaintenanceScreen() {
       <Card tone="card" style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <IconTile name="shield-checkmark-outline" size={44} background="successSoft" color="success" />
         <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 22 }}>
-          Your loan data, EMI schedules and records are safe and encrypted.
+          Your loan data and records are safe and encrypted.
         </Text>
       </Card>
 

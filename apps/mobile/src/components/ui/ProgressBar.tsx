@@ -19,10 +19,12 @@ export interface ProgressBarProps {
   /** 0..1 */
   ratio: number;
   color?: AppColorRole;
+  /** Bar thickness in px (default 6). */
+  height?: number;
   accessibilityLabel?: string;
 }
 
-export function ProgressBar({ ratio, color = 'primary', accessibilityLabel }: ProgressBarProps) {
+export function ProgressBar({ ratio, color = 'primary', height = 6, accessibilityLabel }: ProgressBarProps) {
   const theme = useAppTheme();
   const reduceMotion = useReducedMotion();
   const pct = Math.round(Math.min(1, Math.max(0, ratio)) * 100);
@@ -51,7 +53,7 @@ export function ProgressBar({ ratio, color = 'primary', accessibilityLabel }: Pr
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ min: 0, max: 100, now: pct }}
       style={{
-        height: 6,
+        height,
         borderRadius: theme.radius.pill,
         backgroundColor: theme.colors.mutedSurface,
         overflow: 'hidden',

@@ -62,6 +62,12 @@ export interface LoanListItemVM {
   emiAmountPaise: Paise;
   outstandingPaise: Paise;
   overdueAmountPaise: Paise;
+  /**
+   * Next EMI due date for the Home table. Mock mode fills it (null = none). LIVE list responses
+   * carry no due date, so the adapter leaves it `undefined` and Home falls back to the loan
+   * detail's `nextCollectionDate` (weekly loans only).
+   */
+  nextDueDate?: IsoDate | null;
 }
 
 export interface LoanDetailVM extends LoanListItemVM {
