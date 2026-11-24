@@ -14,7 +14,6 @@
  * MOCK mode: the full three-mode prototype (000000 -> expired, 111111 -> wrong/cooldown) is kept
  * so every state stays reviewable without a backend.
  */
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
@@ -349,7 +348,7 @@ function DobStep({
 
 function MockOtp({ mobile }: { mobile: string | null }) {
   const theme = useAppTheme();
-  const { completeLogin, startLogin } = useSession();
+  const { completeLogin } = useSession();
   const [otp, setOtp] = useState('');
   const [mode, setMode] = useState<Mode>('entry');
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);

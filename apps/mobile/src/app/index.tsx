@@ -5,7 +5,6 @@ import { Image, View } from 'react-native';
 import { apiMode } from '@/features/api/config';
 import { fetchBootConfig, type BootStatus } from '@/features/boot/bootConfig';
 import { useSession } from '@/features/auth/session';
-import { useAppTheme } from '@/hooks/use-theme';
 
 /**
  * Anchor route: no UI of its own (the NATIVE splash covers startup). It just sends the user to
@@ -16,7 +15,6 @@ import { useAppTheme } from '@/hooks/use-theme';
  * Mock mode keeps the EXPO_PUBLIC_MOCK_BOOT-driven maintenance/update previews.
  */
 export default function Index() {
-  const theme = useAppTheme();
   const { isLoggedIn, isBootstrapping, sessionExpired } = useSession();
   const live = apiMode() === 'live';
   const [status, setStatus] = useState<BootStatus | null>(live ? 'ok' : null);

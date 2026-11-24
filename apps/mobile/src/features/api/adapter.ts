@@ -28,7 +28,6 @@ import type {
 } from './wireTypes';
 import type {
   BorrowerProfileVM,
-  LastPaymentVM,
   LoanDetailVM,
   LoanDisbursalVM,
   LoanDuesVM,

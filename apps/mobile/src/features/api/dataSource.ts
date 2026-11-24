@@ -22,7 +22,6 @@ import {
   useLoansQuery,
   usePhotoQuery,
   useProfileQuery,
-  useTransactionsQuery,
 } from './queries';
 import type {
   BorrowerProfileVM,

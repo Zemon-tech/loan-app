@@ -7,11 +7,9 @@ import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { Icon, SegmentedControl } from '@/components/ui';
-import { useLoanData } from '@/features/api/dataSource';
 import { showUnbackedScreens } from '@/features/api/features';
 import { useAppTheme } from '@/hooks/use-theme';
 
-import type { Loan } from '../placeholderData';
 
 const SHOW_SEGMENTS = showUnbackedScreens();
 
@@ -35,17 +33,12 @@ function goBackOrHome() {
 
 export function WorkspaceHeader({
   loanId,
-  loan,
   segment,
 }: {
   loanId: string;
-  loan?: Loan;
   segment: WorkspaceSegment;
 }) {
   const theme = useAppTheme();
-  const loanData = useLoanData(loanId);
-  const vm = loanData.status === 'success' ? loanData.data : null;
-  const status = vm?.status ?? loan?.status ?? null;
 
   function onChange(next: WorkspaceSegment) {
     // Replace (not push) so Back always returns to Home, not through the segments.

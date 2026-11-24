@@ -8,7 +8,6 @@ import {
   WorkspaceHeader,
   type WorkspaceSegment,
 } from '@/features/loans/components/WorkspaceHeader';
-import { findPlaceholderLoan } from '@/features/loans/placeholderData';
 import { OfflineBanner } from '@/features/system/components/SystemStates';
 import { useAppTheme } from '@/hooks/use-theme';
 
@@ -37,7 +36,6 @@ export default function LoanWorkspaceLayout() {
     <View style={{ flex: 1, paddingTop: insets.top + theme.spacing.sm, backgroundColor: theme.colors.canvas }}>
       <WorkspaceHeader
         loanId={loanId ?? ''}
-        loan={findPlaceholderLoan(loanId ?? '')}
         segment={segment}
       />
       <View style={{ paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.sm }}>

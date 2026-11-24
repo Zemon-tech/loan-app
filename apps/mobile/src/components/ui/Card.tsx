@@ -1,7 +1,7 @@
 /**
  * Card — a surface container with padding + rounded corners (PRD F-07).
  */
-import { StyleSheet, View, type StyleProp, type ViewProps, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewProps, type ViewStyle } from 'react-native';
 
 import { useAppTheme } from '@/hooks/use-theme';
 

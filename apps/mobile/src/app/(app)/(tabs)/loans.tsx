@@ -24,7 +24,6 @@ import Animated, {
 import { BrandMark, Icon, IconTile, ScreenContainer } from '@/components/ui';
 import { buildLoansSummary } from '@/features/api/adapter';
 import { useLoansData, usePhotoData, useProfileData } from '@/features/api/dataSource';
-import { showUnbackedScreens } from '@/features/api/features';
 import { useSecureScreen } from '@/features/security/useSecureScreen';
 import { HomeSkeleton } from '@/features/system/components/Skeletons';
 import { LoadErrorState, NoLoansState, OfflineBanner } from '@/features/system/components/SystemStates';
@@ -32,8 +31,6 @@ import { LoansChart } from '@/features/loans/components/LoansChart';
 import { LoansTable } from '@/features/loans/components/LoansTable';
 import type { LoanListItemVM } from '@/features/api/vm';
 import { useAppTheme } from '@/hooks/use-theme';
-
-const SHOW_MOCK_EXTRAS = showUnbackedScreens();
 
 function greeting(): string {
   const h = new Date().getHours();
