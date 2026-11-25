@@ -5,7 +5,7 @@
  */
 import type { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/hooks/use-theme';
@@ -21,34 +21,17 @@ export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) 
   return (
     <View
       style={{
-        backgroundColor: theme.colors.canvas,
-        paddingHorizontal: theme.spacing.lg,
+        // Full width, flush with the bottom and both sides. The bottom inset is padding INSIDE the
+        // bar, so the white background extends under the system navigation bar.
+        backgroundColor: theme.colors.surface,
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.border,
         paddingTop: theme.spacing.sm,
-        paddingBottom: Math.max(insets.bottom, theme.spacing.md),
+        paddingHorizontal: theme.spacing.sm,
+        paddingBottom: insets.bottom + theme.spacing.sm,
       }}
     >
-      <View
-        accessibilityRole="tablist"
-        style={{
-          flexDirection: 'row',
-          gap: theme.spacing.sm,
-          padding: theme.spacing.sm,
-          borderRadius: theme.radius.xl + 12,
-          backgroundColor: theme.colors.surface,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.08,
-              shadowRadius: 16,
-            },
-            default: { elevation: 6 },
-          }),
-        }}
-      >
-        {state.routes.map((route, index) => {
+      <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: theme.spacing.sm }}>        {state.routes.map((route, index) => {
           const { options } = descriptors[route.key]!;
           // Screens hidden with `href: null` get display: none from Expo Router.
           if ((options.tabBarItemStyle as { display?: string } | undefined)?.display === 'none') {

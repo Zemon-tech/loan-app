@@ -91,3 +91,18 @@ export function maskMobile(mobile: string | null): string {
 export function maskMobileDots(mobile: string | null): string {
   return maskMobile(mobile).replace(/X/g, '\u2022');
 }
+/**
+ * Pull a one-time code out of pasted text (e.g. what WhatsApp's "Copy code" put on the clipboard).
+ * Accepts "123456", "123 456", "123-456" and a short message holding exactly one standalone
+ * 6-digit number ("123456 is your verification code"). Returns null for anything else
+ * (empty, too short/long, letters mixed in, or several different candidates).
+ */
+export function extractOtp(text: string | null | undefined, length = 6): string | null {
+  if (!text) return null;
+  const compact = text.trim().replace(/[\s-]/g, '');
+  if (new RegExp(`^\\d{${length}}$`).test(compact)) return compact;
+  const found = text.match(new RegExp(`(?<!\\d)\\d{${length}}(?!\\d)`, 'g'));
+  if (!found) return null;
+  const unique = new Set(found);
+  return unique.size === 1 ? found[0] : null;
+}

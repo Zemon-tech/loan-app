@@ -1,6 +1,6 @@
-# Loan App (NBFC Customer Tracker)
+# Loan App (NBFC Customer App)
 
-A **read-only** customer-facing loan tracker for an Indian NBFC. No money moves through the app, in any phase. See [`PRD.md`](./PRD.md) for the authoritative spec.
+A customer-facing loan app for an Indian NBFC: view loans, dues and payment history, with in-app payment of dues planned (see [AGENTS.md](./AGENTS.md)). See [`PRD.md`](./PRD.md) for the authoritative spec.
 
 ## Monorepo layout (npm workspaces)
 

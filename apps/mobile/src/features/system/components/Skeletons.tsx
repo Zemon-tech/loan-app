@@ -179,20 +179,8 @@ export function HistorySkeleton() {
   const theme = useAppTheme();
   return (
     <SkeletonGroup label="Loading transactions" style={{ flex: 1, gap: theme.spacing.md }}>
-      <Row gap={8}>
-        <View style={{ width: theme.spacing.lg - 8 }} />
-        {[84, 84, 76, 92].map((w, i) => (
-          <Skeleton key={i} width={w} height={40} radius={theme.radius.pill} />
-        ))}
-      </Row>
       <View style={{ paddingHorizontal: theme.spacing.lg, gap: theme.spacing.sm }}>
-        <Row>
-          <Skeleton width={150} height={18} />
-          <Skeleton width={64} height={20} radius={10} />
-          <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            <Skeleton width={90} height={12} />
-          </View>
-        </Row>
+        <Skeleton width={110} height={20} />
         <View style={{ borderRadius: theme.radius.lg, backgroundColor: theme.colors.card, overflow: 'hidden' }}>
           {[0, 1, 2, 3].map((i) => (
             <View

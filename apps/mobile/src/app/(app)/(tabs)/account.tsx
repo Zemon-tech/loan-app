@@ -8,9 +8,9 @@ import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 
 import {
-  BrandMark,
   Card,
   Icon,
+  PageTitle,
   PressableScale,
   ScreenContainer,
   SectionLabel,
@@ -43,26 +43,12 @@ export default function ProfileScreen() {
 
   const displayName = profile?.name || 'Borrower';
   const initials = profile?.initials || (profile?.name ? profile.name.slice(0, 2).toUpperCase() : 'B');
-  const rawPhone = profile?.phone || mobile || '+917042238874';
+  const rawPhone = profile?.phone || mobile || null;
   const phoneDisplay = rawPhone ? formatMobile(rawPhone) : null;
 
   return (
     <ScreenContainer tone="canvas" bottomInset={false}>
-      {/* App bar */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-        <BrandMark size={36} />
-        <View>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold, letterSpacing: 0.6 }}>
-            ALANG CREDITS
-          </Text>
-          <Text
-            accessibilityRole="header"
-            style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}
-          >
-            Profile
-          </Text>
-        </View>
-      </View>
+      <PageTitle title="Profile" />
 
       {/* Identity */}
       <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md }}>

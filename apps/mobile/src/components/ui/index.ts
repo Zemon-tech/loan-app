@@ -24,6 +24,8 @@ export { ProgressBar } from './ProgressBar';
 export type { ProgressBarProps } from './ProgressBar';
 export { SegmentedControl } from './SegmentedControl';
 export type { SegmentedControlProps } from './SegmentedControl';
+export { PageTitle } from './PageTitle';
+export type { PageTitleProps } from './PageTitle';
 export { ScreenHeader } from './ScreenHeader';
 export type { ScreenHeaderProps } from './ScreenHeader';
 export { BottomSheet, ConfirmSheet, OptionRow } from './BottomSheet';

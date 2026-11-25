@@ -86,3 +86,43 @@ export function formatINR(paise: Paise): string {
   const rupees = paiseToWholeRupees(paise);
   return `${RUPEE}${groupIndian(rupees)}`;
 }
+/**
+ * Total an instalment plan adds up to: instalment x number of instalments, in integer paise.
+ * Returns null when either input is missing, not positive, or the instalment count is not a whole
+ * number, so callers can show nothing rather than a made-up total. No floating-point money.
+ *
+ *   totalPayablePaise(20000, 120) -> 2400000   (Rs 200 x 120 = Rs 24,000)
+ */
+export function totalPayablePaise(emiPaise: Paise, installments: number | null | undefined): Paise | null {
+  if (!isValidPaise(emiPaise) || emiPaise <= 0) return null;
+  if (installments == null || !Number.isInteger(installments) || installments <= 0) return null;
+  const total = emiPaise * installments;
+  return isValidPaise(total) ? total : null;
+}
+
+/**
+ * Interest charged on a flat-rate plan: total payable (instalment x count) minus the loan amount.
+ * The API has no interest field, so this is derived. Null when the plan cannot be worked out or
+ * the result would be negative (never shows a made-up or negative interest).
+ *
+ *   interestChargedPaise(20000, 120, 2000000) -> 400000   (Rs 24,000 - Rs 20,000 = Rs 4,000)
+ */
+export function interestChargedPaise(
+  emiPaise: Paise,
+  installments: number | null | undefined,
+  principalPaise: Paise | null | undefined,
+): Paise | null {
+  const total = totalPayablePaise(emiPaise, installments);
+  if (total == null || principalPaise == null || !isValidPaise(principalPaise) || principalPaise <= 0) return null;
+  const interest = total - principalPaise;
+  return interest >= 0 ? interest : null;
+}
+
+/**
+ * How many whole instalments an amount is made of, e.g. Rs 400 at Rs 200 each = 2. Null unless the
+ * amount is an exact multiple (so a "(Rs 200 x 2)" label is never shown when it would not add up).
+ */
+export function wholeInstallmentsIn(amountPaise: Paise, emiPaise: Paise): number | null {
+  if (!isValidPaise(amountPaise) || !isValidPaise(emiPaise) || emiPaise <= 0 || amountPaise < 0) return null;
+  return amountPaise % emiPaise === 0 ? amountPaise / emiPaise : null;
+}

@@ -170,14 +170,21 @@ export const AppTouchTarget = { min: 44 } as const;
  * Golden-ratio tokens (phi ~ 1.618). Used by the login screen; existing tokens are unchanged.
  * - split: screen height divided 38.2% (brand zone) / 61.8% (form zone).
  * - spacing: Fibonacci steps.
- * - type: body 16 -> heading 26 (16 x phi); small is the 12px readability floor.
+ * - type: stepped by sqrt(phi) = 1.272, so every SECOND step is a true golden interval and the
+ *   middle sizes a real UI needs exist (pure phi jumps 16 -> 26 -> 42 with nothing between):
+ *   caption 13 (12.6) | body 16 | lead 20 (20.4) | heading 26 (16 x phi) | display 33 (hero
+ *   figure, e.g. the outstanding balance). 12 is the floor.
+ * - lineHeight: body 24 (1.5), lead 28 (1.4), heading 32 (1.25; headings sit tighter).
+ * - Roles: heading = page title, lead = app-bar / section title, body = text, caption = helper.
+ *   Keep to 3-4 levels per screen; space ABOVE a heading is larger than below it.
  * - controlHeight: 55 (34 x phi), above the 44pt touch minimum.
  */
 export const AppGolden = {
   ratio: 1.618,
   split: { brand: 0.382, form: 0.618 },
   spacing: { f1: 8, f2: 13, f3: 21, f4: 34, f5: 55 },
-  type: { small: 12, body: 16, heading: 26 },
+  type: { small: 12, caption: 13, body: 16, lead: 20, heading: 26, display: 33 },
+  lineHeight: { body: 24, lead: 28, heading: 32, display: 40 },
   controlHeight: 55,
 } as const;
 
@@ -210,6 +217,19 @@ export const StatusColorRole = {
   UPCOMING: 'textSecondary',
 } as const;
 
+/**
+ * Screen background gradients. Light theme only (dark stays flat, `null`).
+ * Soft brand-yellow wash at the top fading through the page tint into a faint teal at the bottom.
+ * Kept pale so text and white cards keep their contrast.
+ */
+export const AppGradients = {
+  light: {
+    screen: ['#FFF1BF', '#FDF7E7', '#F8F8F8', '#EAF4F6'],
+    screenLocations: [0, 0.3, 0.7, 1],
+  },
+  dark: null,
+} as const;
+
 export type AppColorScheme = keyof typeof AppColors; // 'light' | 'dark'
 export type AppColorRole = keyof (typeof AppColors)['light'];
 export type AppSpacingKey = keyof typeof AppSpacing;
@@ -228,6 +248,8 @@ export type AppTheme = {
   touchTarget: typeof AppTouchTarget;
   motion: typeof AppMotion;
   golden: typeof AppGolden;
+  /** Screen background gradient, or null for a flat background. */
+  gradient: { colors: readonly [string, string, ...string[]]; locations: readonly [number, number, ...number[]] } | null;
 };
 
 export function getAppTheme(scheme: AppColorScheme): AppTheme {
@@ -240,5 +262,8 @@ export function getAppTheme(scheme: AppColorScheme): AppTheme {
     touchTarget: AppTouchTarget,
     motion: AppMotion,
     golden: AppGolden,
+    gradient: AppGradients[scheme]
+      ? { colors: AppGradients[scheme].screen, locations: AppGradients[scheme].screenLocations }
+      : null,
   };
 }

@@ -79,7 +79,7 @@ export function WorkspaceHeader({
             numberOfLines={1}
             style={{
               color: theme.colors.textPrimary,
-              fontSize: theme.typography.size.subtitle,
+              fontSize: theme.golden.type.lead,
               fontWeight: theme.typography.weight.bold,
               flexShrink: 1,
             }}

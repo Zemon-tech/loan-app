@@ -1,79 +1,73 @@
 /**
- * S8: Transaction History — PRD 8.8. Type filter + record count, grouped by month with a net
- * credit per month. Each row: type icon, type + tag, mode and date, reference, signed amount.
- * Tap opens a receipt-style bottom sheet.
+ * S8: Transaction History. One row per ledger entry, newest first, grouped by month. Each row
+ * shows exactly what the API provides: description, date, direction (credit / debit), amount,
+ * and for payments the payment mode and channel, each with a visible label. Nothing is invented: reference numbers, receipts,
+ * times and splits are not in the API, so they are not shown. Pagination loads more on scroll.
  *
- * TODO (M-08):
- *  - GET /v1/loans/{loanId}/transactions?cursor=&limit=20; infinite scroll via cursor
- *  - pull-to-refresh; financial-year filter; empty state from the API; i18n
+ * Direction: credit = money paid or credited to the loan (green, arrow down);
+ * debit = charges or amounts given out (red, arrow up). Colour is always paired with an icon and
+ * a text label.
  */
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  SectionList,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { formatINR as formatPaise, type Paise } from '@app/shared';
+import { formatDate, formatINR } from '@app/shared';
 
-import { Icon, StateScroll, StateView } from '@/components/ui';
-import { formatDate, formatINR, formatMonthYear, monthKey } from '@/features/loans/format';
-import {
-  TXN_STYLE,
-  TransactionSheet,
-  netCredit,
-  signedAmount,
-} from '@/features/loans/components/TransactionSheet';
+import { Icon, StateScroll, StateView, type IconName } from '@/components/ui';
+import type { AppColorRole } from '@/constants/theme';
 import { useLoanData, useTransactionsData } from '@/features/api/dataSource';
-import type { LoanDetailVM, TransactionVM } from '@/features/api/vm';
-import type { Transaction, TransactionType } from '@/features/loans/placeholderData';
+import type { TransactionVM } from '@/features/api/vm';
 import { HistorySkeleton } from '@/features/system/components/Skeletons';
 import { LoadErrorState, NoTransactionsState, SupportSheet } from '@/features/system/components/SystemStates';
 import { useAppTheme } from '@/hooks/use-theme';
 
-type TypeFilter = 'ALL' | TransactionType;
+const DASH = '\u2014';
 
-const FILTERS: { key: TypeFilter; label: string }[] = [
-  { key: 'ALL', label: 'All types' },
-  { key: 'PAYMENT', label: 'Payments' },
-  { key: 'CHARGE', label: 'Charges' },
-  { key: 'DISCOUNT', label: 'Discounts' },
-  { key: 'ADJUSTMENT', label: 'Adjustments' },
-];
+const DIRECTION: Record<
+  TransactionVM['direction'],
+  { icon: IconName; fg: AppColorRole; bg: AppColorRole; label: string; sign: string }
+> = {
+  credit: { icon: 'arrow-down', fg: 'success', bg: 'successSoft', label: 'Credit', sign: '+' },
+  debit: { icon: 'arrow-up', fg: 'danger', bg: 'dangerSoft', label: 'Debit', sign: '\u2212' },
+};
 
-function netLabel(n: number): string {
-  return `Net: ${n < 0 ? '\u2212' : '+'}${formatINR(Math.abs(n))}`;
+/** Icons for the API's paymentMode / channel values (unknown values get a neutral icon). */
+const MODE_ICON: Record<string, IconName> = {
+  Cash: 'cash-outline',
+  Bank: 'business-outline',
+  Wallet: 'wallet-outline',
+  UPI: 'qr-code-outline',
+  Other: 'ellipsis-horizontal-circle-outline',
+};
+const CHANNEL_ICON: Record<string, IconName> = {
+  Agent: 'person-outline',
+  Office: 'storefront-outline',
+  Online: 'globe-outline',
+};
+
+interface Section {
+  key: string;
+  title: string;
+  data: TransactionVM[];
 }
 
-function vmToSheetTransaction(item: TransactionVM, index: number): Transaction {
-  let tType: TransactionType = 'ADJUSTMENT';
-  const rawType = (item?.type || '').toLowerCase();
-  if (rawType.includes('payment') || rawType.includes('advance') || rawType.includes('repayment')) {
-    tType = 'PAYMENT';
-  } else if (rawType.includes('fee') || rawType.includes('interest') || rawType.includes('charge') || rawType.includes('disbursed')) {
-    tType = 'CHARGE';
-  } else if (rawType.includes('discount')) {
-    tType = 'DISCOUNT';
+/** Group consecutive rows by month, keeping the API's newest-first order. */
+function groupByMonth(items: TransactionVM[]): Section[] {
+  const sections: Section[] = [];
+  for (const item of items) {
+    const key = item.date ? item.date.slice(0, 7) : 'unknown';
+    let current = sections[sections.length - 1];
+    if (!current || current.key !== key) {
+      // "14 Jun 2026" -> "Jun 2026"
+      const title = item.date ? formatDate(item.date).split(' ').slice(1).join(' ') : 'Date not available';
+      current = { key, title, data: [] };
+      sections.push(current);
+    }
+    current.data.push(item);
   }
-
-  const dateObj = new Date(item.rawDate);
-
-  return {
-    id: `txn-${index}-${item.rawDate}`,
-    date: isNaN(dateObj.getTime()) ? new Date() : dateObj,
-    type: tType,
-    label: item.description,
-    mode: item.paymentMode === 'Cash' ? 'Cash' : 'Online',
-    modeDetail: item.channel ? `${item.paymentMode || 'Payment'} (${item.channel})` : item.paymentMode || undefined,
-    amount: item.amountPaise / 100,
-    referenceNo: item.paymentMode ? `${item.paymentMode}-${index + 1}` : undefined,
-  };
+  return sections;
 }
 
 export default function HistoryScreen() {
@@ -90,7 +84,12 @@ export default function HistoryScreen() {
   if (txnQuery.status === 'error' || loanQuery.status === 'error') {
     return (
       <StateScroll>
-        <LoadErrorState onRetry={() => { txnQuery.refetch(); loanQuery.refetch(); }} />
+        <LoadErrorState
+          onRetry={() => {
+            txnQuery.refetch();
+            loanQuery.refetch();
+          }}
+        />
       </StateScroll>
     );
   }
@@ -109,9 +108,9 @@ export default function HistoryScreen() {
     return <EmptyHistory onRefresh={txnQuery.refetch} isRefreshing={txnQuery.isRefreshing} />;
   }
   return (
-    <HistoryContent
-      loanVM={loanQuery.data}
-      txnData={txnQuery.data}
+    <HistoryList
+      transactions={txnQuery.data.transactions}
+      totalCount={txnQuery.data.totalCount}
       onEndReached={txnQuery.fetchNextPage}
       hasNextPage={txnQuery.hasNextPage}
       isFetchingNextPage={txnQuery.isFetchingNextPage}
@@ -137,25 +136,104 @@ function EmptyHistory({ onRefresh, isRefreshing }: { onRefresh: () => void; isRe
       }
     >
       <NoTransactionsState onHelp={() => setHelpOpen(true)} />
-      <View style={{ flexDirection: 'row', gap: theme.spacing.md, paddingHorizontal: theme.spacing.xs }}>
-        <Icon name="information-circle-outline" size={18} color="textSecondary" />
-        <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, lineHeight: 20 }}>
-          This app shows your loan information only. Payments are not made in this app.
-        </Text>
-      </View>
       <SupportSheet visible={helpOpen} onClose={() => setHelpOpen(false)} />
     </ScrollView>
   );
 }
 
-interface HistoryContentProps {
-  loanVM: LoanDetailVM;
-  txnData: {
-    transactions: TransactionVM[];
-    totalCreditPaise: Paise;
-    totalDebitPaise: Paise;
-    totalCount: number;
-  };
+/** Labelled detail: small caption on top ("Payment mode"), icon + value underneath ("UPI"). */
+function MetaField({ label, icon, value }: { label: string; icon: IconName; value: string }) {
+  const theme = useAppTheme();
+  const g = theme.golden;
+  return (
+    <View style={{ gap: 2 }}>
+      <Text style={{ color: theme.colors.textSecondary, fontSize: g.type.small }}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Icon name={icon} size={16} color="textPrimary" />
+        <Text style={{ color: theme.colors.textPrimary, fontSize: g.type.caption + 1, fontWeight: theme.typography.weight.semibold }}>
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+}
+function TransactionRow({ item, first, last }: { item: TransactionVM; first: boolean; last: boolean }) {
+  const theme = useAppTheme();
+  const g = theme.golden;
+  const d = DIRECTION[item.direction] ?? DIRECTION.credit;
+  const date = item.date ? formatDate(item.date) : DASH;
+  const amount = `${d.sign}${formatINR(item.amountPaise)}`;
+  const mode = item.paymentMode;
+  const channel = item.channel;
+
+  const a11y = [d.label, amount, item.description, date, mode ? `Payment mode ${mode}` : null, channel ? `Channel ${channel}` : null]
+    .filter(Boolean)
+    .join(', ');
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={a11y}
+      style={{
+        marginHorizontal: theme.spacing.lg,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: g.spacing.f2,
+        padding: g.spacing.f2 + 3,
+        backgroundColor: theme.colors.card,
+        borderTopLeftRadius: first ? theme.radius.lg : 0,
+        borderTopRightRadius: first ? theme.radius.lg : 0,
+        borderBottomLeftRadius: last ? theme.radius.lg : 0,
+        borderBottomRightRadius: last ? theme.radius.lg : 0,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: theme.colors.border,
+        marginBottom: last ? theme.spacing.md : 0,
+      }}
+    >
+      <View
+        style={{
+          width: g.controlHeight - g.spacing.f2,
+          height: g.controlHeight - g.spacing.f2,
+          borderRadius: (g.controlHeight - g.spacing.f2) / 2,
+          backgroundColor: theme.colors[d.bg],
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Icon name={d.icon} size={20} color={d.fg} />
+      </View>
+
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text
+          numberOfLines={2}
+          style={{ color: theme.colors.textPrimary, fontSize: g.type.body, lineHeight: g.lineHeight.body, fontWeight: theme.typography.weight.semibold }}
+        >
+          {item.description || DASH}
+        </Text>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: g.type.caption }}>{date}</Text>
+        {mode || channel ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: g.spacing.f3, rowGap: g.spacing.f1, marginTop: g.spacing.f1 }}>
+            {mode ? <MetaField label="Payment mode" icon={MODE_ICON[mode] ?? 'ellipsis-horizontal-circle-outline'} value={mode} /> : null}
+            {channel ? <MetaField label="Channel" icon={CHANNEL_ICON[channel] ?? 'ellipsis-horizontal-circle-outline'} value={channel} /> : null}
+          </View>
+        ) : null}
+      </View>
+
+      <View style={{ alignItems: 'flex-end', gap: 2 }}>
+        <Text style={{ color: theme.colors[d.fg], fontSize: g.type.body, lineHeight: g.lineHeight.body, fontWeight: theme.typography.weight.bold }}>
+          {amount}
+        </Text>
+        <Text style={{ color: theme.colors[d.fg], fontSize: g.type.caption, fontWeight: theme.typography.weight.semibold }}>
+          {d.label}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+interface HistoryListProps {
+  transactions: TransactionVM[];
+  totalCount: number;
   onEndReached: () => void;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
@@ -163,67 +241,34 @@ interface HistoryContentProps {
   isRefreshing: boolean;
 }
 
-function HistoryContent({
-  loanVM,
-  txnData,
+function HistoryList({
+  transactions,
+  totalCount,
   onEndReached,
   hasNextPage,
   isFetchingNextPage,
   onRefresh,
   isRefreshing,
-}: HistoryContentProps) {
+}: HistoryListProps) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const [filter, setFilter] = useState<TypeFilter>('ALL');
-  const [selected, setSelected] = useState<Transaction | null>(null);
-  const [open, setOpen] = useState(false);
+  const sections = useMemo(() => groupByMonth(transactions), [transactions]);
 
-  // Convert VMs to SectionList format
-  const { sections, total } = useMemo(() => {
-    const sheetItems = txnData.transactions.map((t, idx) => vmToSheetTransaction(t, idx));
-    const all = sheetItems
-      .filter((t) => filter === 'ALL' || t.type === filter)
-      .sort((a, b) => b.date.getTime() - a.date.getTime());
-    const map = new Map<number, { title: string; data: Transaction[] }>();
-    for (const t of all) {
-      const k = monthKey(t.date);
-      if (!map.has(k)) map.set(k, { title: formatMonthYear(t.date), data: [] });
-      map.get(k)!.data.push(t);
-    }
-    return { sections: [...map.values()], total: all.length };
-  }, [txnData, filter]);
-
-  const keyExtractor = useCallback((t: Transaction) => t.id, []);
-
-  const handleSelect = useCallback((item: Transaction) => {
-    setSelected(item);
-    setOpen(true);
-  }, []);
+  const keyExtractor = useCallback((t: TransactionVM, index: number) => `${t.rawDate}-${index}`, []);
 
   const renderSectionHeader = useCallback(
-    ({ section }: { section: { title: string; data: Transaction[] } }) => (
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: theme.spacing.lg,
-          paddingVertical: theme.spacing.sm,
-          backgroundColor: theme.colors.canvas,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-          <Text accessibilityRole="header" style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
-            {section.title}
-          </Text>
-          <View style={{ paddingVertical: 2, paddingHorizontal: theme.spacing.sm, borderRadius: theme.radius.pill, backgroundColor: theme.colors.primarySoft }}>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 2, fontWeight: theme.typography.weight.semibold }}>
-              {section.data.length} {section.data.length === 1 ? 'event' : 'events'}
-            </Text>
-          </View>
-        </View>
-        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
-          {netLabel(netCredit(section.data))}
+    ({ section }: { section: Section }) => (
+      <View style={{ paddingHorizontal: theme.spacing.lg, paddingVertical: theme.golden.spacing.f1, backgroundColor: theme.colors.canvas }}>
+        <Text
+          accessibilityRole="header"
+          style={{
+            color: theme.colors.textPrimary,
+            fontSize: theme.golden.type.lead,
+            lineHeight: theme.golden.lineHeight.lead,
+            fontWeight: theme.typography.weight.bold,
+          }}
+        >
+          {section.title}
         </Text>
       </View>
     ),
@@ -231,229 +276,54 @@ function HistoryContent({
   );
 
   const renderItem = useCallback(
-    ({ item, index, section }: { item: Transaction; index: number; section: { data: Transaction[] } }) => {
-      if (!item) return null;
-      const s = TXN_STYLE[item.type] ?? TXN_STYLE.ADJUSTMENT;
-      const first = index === 0;
-      const last = index === section.data.length - 1;
-      const icon = item.type === 'PAYMENT' && item.mode === 'Cash' ? 'cash-outline' : s.icon;
-      const detail = item.type === 'PAYMENT' ? (item.modeDetail ?? item.mode ?? 'Payment') : item.type === 'CHARGE' ? 'Administrative charge' : item.type === 'DISCOUNT' ? 'Concession' : 'Ledger correction';
-      const ref = item.referenceNo ? `Ref: ${item.referenceNo}` : item.receiptNo ? `Receipt: ${item.receiptNo}` : null;
-
-      return (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${item.label}, ${detail}, ${formatDate(item.date)}, ${signedAmount(item)}`}
-          accessibilityHint="Opens transaction details"
-          onPress={() => handleSelect(item)}
-          style={({ pressed }) => ({
-            marginHorizontal: theme.spacing.lg,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: theme.spacing.md,
-            minHeight: 76,
-            padding: theme.spacing.md,
-            backgroundColor: theme.colors.card,
-            borderTopLeftRadius: first ? theme.radius.lg : 0,
-            borderTopRightRadius: first ? theme.radius.lg : 0,
-            borderBottomLeftRadius: last ? theme.radius.lg : 0,
-            borderBottomRightRadius: last ? theme.radius.lg : 0,
-            borderBottomWidth: last ? 0 : 1,
-            borderBottomColor: theme.colors.border,
-            marginBottom: last ? theme.spacing.md : 0,
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors[s.bg], alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name={icon} size={20} color={s.fg} />
-          </View>
-
-          <View style={{ flex: 1, gap: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.semibold }}>
-                {item.label}
-              </Text>
-              {s.tag ? (
-                <View style={{ paddingVertical: 1, paddingHorizontal: 6, borderRadius: theme.radius.pill, backgroundColor: theme.colors[s.bg] }}>
-                  <Text style={{ color: theme.colors[s.fg], fontSize: theme.typography.size.caption - 2, fontWeight: theme.typography.weight.semibold }}>
-                    {s.tag}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-            <Text numberOfLines={1} style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-              {detail} {'\u2022'} {formatDate(item.date)}
-            </Text>
-            {ref ? (
-              <Text numberOfLines={1} style={{ color: theme.colors.textSecondary, opacity: 0.8, fontSize: theme.typography.size.caption - 2 }}>
-                {ref}
-              </Text>
-            ) : null}
-          </View>
-
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ color: theme.colors[s.amount], fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.bold }}>
-              {signedAmount(item)}
-            </Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 2 }}>{s.caption}</Text>
-          </View>
-        </Pressable>
-      );
-    },
-    [handleSelect, theme],
+    ({ item, index, section }: { item: TransactionVM; index: number; section: Section }) => (
+      <TransactionRow item={item} first={index === 0} last={index === section.data.length - 1} />
+    ),
+    [],
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Lifetime stats banner */}
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: theme.spacing.md,
-          paddingHorizontal: theme.spacing.lg,
-          paddingBottom: theme.spacing.md,
-        }}
-      >
-        <View
-          style={{
-            flex: 1,
-            padding: theme.spacing.md,
-            borderRadius: theme.radius.md,
-            backgroundColor: theme.colors.surface,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            gap: 2,
-          }}
-        >
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
-            TOTAL CREDITED
-          </Text>
-          <Text style={{ color: theme.colors.success, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
-            +{formatPaise(txnData.totalCreditPaise)}
-          </Text>
-        </View>
-        <View
-          style={{
-            flex: 1,
-            padding: theme.spacing.md,
-            borderRadius: theme.radius.md,
-            backgroundColor: theme.colors.surface,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            gap: 2,
-          }}
-        >
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
-            TOTAL DEBITED
-          </Text>
-          <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
-            {formatPaise(txnData.totalDebitPaise)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Filter ribbon */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: theme.spacing.sm }}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ gap: theme.spacing.sm, paddingHorizontal: theme.spacing.lg }}
-        >
-          {FILTERS.map((f) => {
-            const isSelected = f.key === filter;
-            return (
-              <Pressable
-                key={f.key}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isSelected }}
-                onPress={() => setFilter(f.key)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  minHeight: 40,
-                  paddingHorizontal: theme.spacing.lg,
-                  borderRadius: theme.radius.pill,
-                  backgroundColor: isSelected ? theme.colors.secondary : theme.colors.surface,
-                  borderWidth: 1,
-                  borderColor: isSelected ? theme.colors.secondary : theme.colors.border,
-                }}
-              >
-                {f.key === 'ALL' ? (
-                  <Icon name="options-outline" size={16} color={isSelected ? 'onSecondary' : 'textSecondary'} />
-                ) : null}
-                <Text
-                  style={{
-                    color: isSelected ? theme.colors.onSecondary : theme.colors.textSecondary,
-                    fontSize: theme.typography.size.caption,
-                    fontWeight: theme.typography.weight.semibold,
-                  }}
-                >
-                  {f.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+    <SectionList
+      sections={sections}
+      keyExtractor={keyExtractor}
+      stickySectionHeadersEnabled
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={5}
+      removeClippedSubviews
+      renderSectionHeader={renderSectionHeader}
+      renderItem={renderItem}
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) onEndReached();
+      }}
+      onEndReachedThreshold={0.5}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          tintColor={theme.colors.primary}
+          colors={[theme.colors.primary]}
+        />
+      }
+      contentContainerStyle={{ paddingBottom: insets.bottom + theme.spacing.xl }}
+      ListHeaderComponent={
         <Text
           accessibilityLiveRegion="polite"
-          style={{ paddingHorizontal: theme.spacing.lg, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}
+          style={{
+            paddingHorizontal: theme.spacing.lg,
+            paddingBottom: theme.spacing.xs,
+            color: theme.colors.textSecondary,
+            fontSize: theme.golden.type.caption,
+          }}
         >
-          {total} {total === 1 ? 'record' : 'records'}
+          {totalCount} {totalCount === 1 ? 'transaction' : 'transactions'}
         </Text>
-      </View>
-
-      <SectionList
-        sections={sections}
-        keyExtractor={keyExtractor}
-        stickySectionHeadersEnabled
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={5}
-        updateCellsBatchingPeriod={50}
-        removeClippedSubviews
-        renderSectionHeader={renderSectionHeader}
-        renderItem={renderItem}
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) onEndReached();
-        }}
-        onEndReachedThreshold={0.5}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
-        }
-        contentContainerStyle={{ paddingBottom: insets.bottom + theme.spacing.xl }}
-        ListEmptyComponent={
-          <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.body, padding: theme.spacing.xl }}>
-            No transactions yet.
-          </Text>
-        }
-        ListFooterComponent={
-          <View style={{ gap: theme.spacing.sm, padding: theme.spacing.lg }}>
-            {isFetchingNextPage ? (
-              <ActivityIndicator size="small" color={theme.colors.primary} style={{ paddingVertical: theme.spacing.sm }} />
-            ) : null}
-            <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-              <Icon name="information-circle-outline" size={18} color="textSecondary" />
-              <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, lineHeight: 20 }}>
-                Historical records only. Payments are not made in this app.
-              </Text>
-            </View>
-          </View>
-        }
-      />
-
-      <TransactionSheet
-        visible={open}
-        transaction={selected}
-        accountNumber={loanVM.accountNumber}
-        onClose={() => setOpen(false)}
-      />
-    </View>
+      }
+      ListFooterComponent={
+        isFetchingNextPage ? (
+          <ActivityIndicator size="small" color={theme.colors.primary} style={{ paddingVertical: theme.spacing.lg }} />
+        ) : null
+      }
+    />
   );
 }

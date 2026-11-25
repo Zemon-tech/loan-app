@@ -52,8 +52,8 @@ export function BrandHeader({ title, showBack = false, onBack }: BrandHeaderProp
         accessibilityRole="header"
         style={{
           color: theme.colors.textPrimary,
-          fontSize: theme.typography.size.subtitle,
-          fontWeight: theme.typography.weight.semibold,
+          fontSize: theme.golden.type.lead,
+          fontWeight: theme.typography.weight.bold,
         }}
       >
         {title}

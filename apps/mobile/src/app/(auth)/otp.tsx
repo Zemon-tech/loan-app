@@ -14,17 +14,16 @@
  * MOCK mode: the full three-mode prototype (000000 -> expired, 111111 -> wrong/cooldown) is kept
  * so every state stays reviewable without a backend.
  */
+import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import {
-  BrandHeader,
   Button,
   Card,
   Icon,
   IconTile,
   OtpInput,
-  Pill,
   ProgressBar,
   ScreenContainer,
   goBackOrLogin,
@@ -33,10 +32,11 @@ import { apiMode } from '@/features/api/config';
 import * as endpoints from '@/features/api/endpoints';
 import { friendlyMessage } from '@/features/api/errors';
 import { useSecureScreen } from '@/features/security/useSecureScreen';
-import { maskMobile } from '@/features/auth/format';
+import { extractOtp, maskMobile } from '@/features/auth/format';
 import { useSession } from '@/features/auth/session';
 import { parseIsoDate, todayIST } from '@app/shared';
 import { useAppTheme } from '@/hooks/use-theme';
+import { logger } from '@/lib/logger';
 
 const RESEND_SECONDS = 30;
 const MAX_ATTEMPTS = 3;
@@ -55,9 +55,9 @@ function formatCountdown(total: number): string {
 }
 
 /**
- * Resend countdown + button. The label sits in a flexible, wrapping column and the button is
- * content-sized (`fullWidth={false}`), so swapping "Resend code in 00:30" for "You can request a
- * new code" can never push the button off-screen or against the screen edge.
+ * Resend block: "Didn't receive code?" with a "Resend" link underneath. While the countdown runs
+ * the link is dimmed and shows the time left ("Resend - 00:30"); when it ends it turns into a
+ * tappable link. Centred, so it can never be pushed off-screen by a longer label.
  */
 function ResendRow({
   canResend,
@@ -69,21 +69,115 @@ function ResendRow({
   onResend: () => void;
 }) {
   const theme = useAppTheme();
+  const size = theme.golden.type.body;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-        <Icon name="time-outline" size={20} color="textSecondary" />
-        <Text
-          accessibilityLiveRegion="polite"
-          style={{ flexShrink: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.body }}
-        >
-          {canResend ? 'You can request a new code' : 'Resend code in '}
-          {canResend ? null : (
-            <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.bold }}>{formatCountdown(secondsLeft)}</Text>
-          )}
+    <View style={{ alignItems: 'center', gap: theme.golden.spacing.f1 }}>
+      <Text style={{ color: theme.colors.textSecondary, fontSize: size }}>Didn&apos;t receive code?</Text>
+      <Pressable
+        onPress={onResend}
+        disabled={!canResend}
+        accessibilityRole="button"
+        accessibilityLabel={canResend ? 'Resend code' : `Resend code in ${secondsLeft} seconds`}
+        accessibilityState={{ disabled: !canResend }}
+        style={{ minHeight: theme.touchTarget.min, justifyContent: 'center', paddingHorizontal: theme.spacing.md }}
+      >
+        <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.textSecondary, fontSize: size }}>
+          <Text
+            style={{
+              color: canResend ? theme.colors.interactive : theme.colors.textSecondary,
+              fontWeight: theme.typography.weight.bold,
+            }}
+          >
+            Resend
+          </Text>
+          {canResend ? null : ` - ${formatCountdown(secondsLeft)}`}
         </Text>
-      </View>
-      <Button label="Resend OTP" variant="ghost" fullWidth={false} onPress={onResend} disabled={!canResend} />
+      </Pressable>
+    </View>
+  );
+}
+
+/**
+ * "Paste code": reads the clipboard ONLY when the user taps it (never silently) and fills the
+ * boxes if it holds a 6-digit code, e.g. after tapping "Copy code" on the WhatsApp message.
+ * The clipboard text and the code are never logged.
+ */
+function PasteCodeButton({ onCode, disabled }: { onCode: (code: string) => void; disabled?: boolean }) {
+  const theme = useAppTheme();
+  const [hint, setHint] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function onPress() {
+    if (busy || disabled) return;
+    setBusy(true);
+    setHint(null);
+    try {
+      const code = extractOtp(await Clipboard.getStringAsync());
+      if (code) onCode(code);
+      else setHint('No code found. Copy the code from the message first.');
+    } catch {
+      logger.warn('otp', 'paste_failed');
+      setHint('Could not read the clipboard. Please type the code.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <Button label="Paste code" variant="ghost" leftIcon="clipboard-outline" fullWidth={false} onPress={() => void onPress()} disabled={disabled || busy} />
+      {hint ? (
+        <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.textSecondary, fontSize: theme.golden.type.small + 1, textAlign: 'center' }}>
+          {hint}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+/** Centred title + instruction + masked number with an edit icon (replaces the old header/back). */
+function OtpHeading({
+  mobile,
+  onChangeNumber,
+  title = 'Verification code',
+  subtitle = 'Enter the 6-digit code we sent to',
+  showNumber = true,
+}: {
+  mobile: string | null;
+  onChangeNumber: () => void;
+  title?: string;
+  subtitle?: string;
+  showNumber?: boolean;
+}) {
+  const theme = useAppTheme();
+  const g = theme.golden;
+  return (
+    <View style={{ alignItems: 'center', gap: g.spacing.f1 }}>
+      <Text
+        accessibilityRole="header"
+        style={{
+          color: theme.colors.textPrimary,
+          fontSize: g.type.heading,
+          fontWeight: theme.typography.weight.bold,
+          textAlign: 'center',
+        }}
+      >
+        {title}
+      </Text>
+      <Text style={{ color: theme.colors.textSecondary, fontSize: g.type.body, textAlign: 'center' }}>{subtitle}</Text>
+      {showNumber ? (
+        <Pressable
+          onPress={onChangeNumber}
+          accessibilityRole="button"
+          accessibilityLabel={`${maskMobile(mobile)}. Change number`}
+          hitSlop={8}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: g.spacing.f1, minHeight: theme.touchTarget.min }}
+        >
+          <Text style={{ color: theme.colors.textPrimary, fontSize: g.type.body + 2, fontWeight: theme.typography.weight.semibold }}>
+            {maskMobile(mobile)}
+          </Text>
+          <Icon name="create-outline" size={20} color="interactive" />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -203,40 +297,30 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
     <ScreenContainer
       tone="canvas"
       scrollToEndOnKeyboard
-      header={<BrandHeader title="Verify number" showBack />}
       contentStyle={{ justifyContent: 'center' }}
     >
-      <View style={{ gap: theme.spacing.sm }}>
-        <Text
-          accessibilityRole="header"
-          style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.heading, fontWeight: theme.typography.weight.bold }}
-        >
-          {step === 'otp' ? 'Verify your number' : 'Confirm your date of birth'}
-        </Text>
-        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 }}>
-          {step === 'otp' ? (
-            <>
-              Enter the 6-digit code sent to{' '}
-              <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.semibold }}>{maskMobile(mobile)}</Text>
-            </>
-          ) : (
-            'For your security, please confirm your date of birth to continue.'
-          )}
-        </Text>
-        <Text
-          accessibilityRole="link"
-          onPress={step === 'dob' ? () => setStep('otp') : goBackOrLogin}
-          style={{ color: theme.colors.primary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.medium, paddingVertical: theme.spacing.xs }}
-        >
-          {step === 'dob' ? 'Back to code' : 'Change number'}
-        </Text>
-      </View>
-
+      {step === 'otp' ? (
+        <OtpHeading mobile={mobile} onChangeNumber={goBackOrLogin} />
+      ) : (
+        <>
+          <OtpHeading
+            mobile={mobile}
+            onChangeNumber={() => setStep('otp')}
+            title="Confirm your date of birth"
+            subtitle="For your security, please confirm your date of birth to continue."
+            showNumber={false}
+          />
+          <Text
+            accessibilityRole="link"
+            onPress={() => setStep('otp')}
+            style={{ color: theme.colors.interactive, fontSize: theme.golden.type.body, fontWeight: theme.typography.weight.medium, textAlign: 'center', paddingVertical: theme.spacing.xs }}
+          >
+            Back to code
+          </Text>
+        </>
+      )}
       {step === 'otp' ? (
         <View style={{ gap: theme.spacing.md }}>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold, letterSpacing: 0.6 }}>
-            ONE-TIME PASSWORD (OTP)
-          </Text>
           <OtpInput
             value={otp}
             onChange={onOtpChange}
@@ -250,13 +334,11 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
             </View>
           ) : null}
 
+          <PasteCodeButton onCode={onOtpChange} disabled={verifying} />
+
+          <Button label="Verify" onPress={() => void submitVerify()} disabled={!canVerify} loading={verifying} />
+
           <ResendRow canResend={canResend} secondsLeft={secondsLeft} onResend={onResend} />
-
-          <Button label="Verify & Proceed" rightIcon="arrow-forward" onPress={() => void submitVerify()} disabled={!canVerify} loading={verifying} />
-
-          <View style={{ alignItems: 'center' }}>
-            <Pill icon="checkmark-circle-outline" label="SMS autofill supported" color="success" background="canvas" />
-          </View>
         </View>
       ) : (
         <DobStep
@@ -420,28 +502,9 @@ function MockOtp({ mobile }: { mobile: string | null }) {
     <ScreenContainer
       tone="canvas"
       scrollToEndOnKeyboard
-      header={<BrandHeader title="Verify number" showBack />}
       contentStyle={{ justifyContent: 'center' }}
     >
-      <View style={{ gap: theme.spacing.sm }}>
-        <Text
-          accessibilityRole="header"
-          style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.heading, fontWeight: theme.typography.weight.bold }}
-        >
-          Verify your number
-        </Text>
-        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 }}>
-          Enter the 6-digit code sent to{' '}
-          <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.semibold }}>{maskMobile(mobile)}</Text>
-        </Text>
-        <Text
-          accessibilityRole="link"
-          onPress={goBackOrLogin}
-          style={{ color: theme.colors.primary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.medium, paddingVertical: theme.spacing.xs }}
-        >
-          Change number
-        </Text>
-      </View>
+      <OtpHeading mobile={mobile} onChangeNumber={goBackOrLogin} />
 
       {locked ? (
         <>
@@ -481,9 +544,6 @@ function MockOtp({ mobile }: { mobile: string | null }) {
       ) : null}
 
       <View style={{ gap: theme.spacing.md }}>
-        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold, letterSpacing: 0.6 }}>
-          ONE-TIME PASSWORD (OTP)
-        </Text>
         <OtpInput
           value={otp}
           onChange={onChange}
@@ -529,17 +589,15 @@ function MockOtp({ mobile }: { mobile: string | null }) {
 
       {!locked ? (
         <>
-          <ResendRow canResend={canResend} secondsLeft={secondsLeft} onResend={onResend} />
+          <PasteCodeButton onCode={onChange} disabled={verifying || mode === 'expired'} />
 
           {mode === 'expired' ? (
             <Button label="Send a new code" leftIcon="refresh" onPress={onResend} />
           ) : (
-            <Button label="Verify & Proceed" rightIcon="arrow-forward" onPress={() => onVerify()} disabled={!canVerify} loading={verifying} />
+            <Button label="Verify" onPress={() => onVerify()} disabled={!canVerify} loading={verifying} />
           )}
 
-          <View style={{ alignItems: 'center' }}>
-            <Pill icon="checkmark-circle-outline" label="SMS autofill supported" color="success" background="canvas" />
-          </View>
+          <ResendRow canResend={canResend} secondsLeft={secondsLeft} onResend={onResend} />
         </>
       ) : null}
 

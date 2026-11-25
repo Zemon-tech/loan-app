@@ -37,7 +37,7 @@ export default function SessionExpiredScreen() {
           <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
             <Text
               accessibilityRole="header"
-              style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.heading, fontWeight: theme.typography.weight.bold, textAlign: 'center' }}
+              style={{ color: theme.colors.textPrimary, fontSize: theme.golden.type.heading, fontWeight: theme.typography.weight.bold, textAlign: 'center' }}
             >
               Your session has expired
             </Text>

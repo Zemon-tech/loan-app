@@ -376,7 +376,60 @@ const NEW_LOAN = buildLoan({
   paidCash: { amount: 0, count: 0 },
 });
 
-const ALL_LOANS: Loan[] = [REGULAR_LOAN, TWO_WHEELER_LOAN, CLOSED_LOAN, NEW_LOAN];
+// Daily-collection demo loans (fake data) that make the Home table easy to review: different
+// amounts, EMIs and tenures; A06531 is overdue. Total payable = EMI x tenure.
+function dailySeed(
+  loanId: string,
+  accountNumber: string,
+  loanDate: Date,
+  loanAmount: number,
+  emiAmount: number,
+  totalEmis: number,
+  emisPaid: number,
+): Seed {
+  return {
+    loanId,
+    accountNumber,
+    productName: 'Regular Loan',
+    scheme: 'Regular (daily collection)',
+    branch: 'Demo Branch',
+    frequency: 'Daily',
+    loanDate,
+    firstEmiDate: addDays(loanDate, 1),
+    emiAmount,
+    totalEmis,
+    emisPaid,
+    loanAmount,
+    totalInterest: emiAmount * totalEmis - loanAmount,
+    lateFee: 0,
+    overdueInterest: 0,
+    recoveryCharges: 0,
+    discount: 0,
+    totalPaid: emiAmount * emisPaid,
+    paidOnline: { amount: emiAmount * Math.floor(emisPaid / 2), count: Math.floor(emisPaid / 2) },
+    paidCash: { amount: emiAmount * Math.ceil(emisPaid / 2), count: Math.ceil(emisPaid / 2) },
+  };
+}
+
+/** Rs 20,000 | Rs 200 x 120 = Rs 24,000 | on track. */
+const DEMO_LOAN_1 = buildLoan(dailySeed('ln_demo_e', 'A06532', d(2026, 8, 10), 20000, 200, 120, 40));
+/** Rs 10,000 | Rs 150 x 80 = Rs 12,000 | overdue (18 EMIs behind). */
+const DEMO_LOAN_2 = buildLoan(dailySeed('ln_demo_f', 'A06531', d(2026, 8, 12), 10000, 150, 80, 20));
+/** Rs 15,000 | Rs 200 x 90 = Rs 18,000 | on track. */
+const DEMO_LOAN_3 = buildLoan(dailySeed('ln_demo_g', 'A06530', d(2026, 9, 1), 15000, 200, 90, 18));
+/** Rs 1,50,000 | Rs 3,000 x 60 = Rs 1,80,000 | on track. */
+const DEMO_LOAN_4 = buildLoan(dailySeed('ln_demo_h', 'A06529', d(2026, 9, 7), 150000, 3000, 60, 12));
+
+const ALL_LOANS: Loan[] = [
+  REGULAR_LOAN,
+  TWO_WHEELER_LOAN,
+  CLOSED_LOAN,
+  NEW_LOAN,
+  DEMO_LOAN_1,
+  DEMO_LOAN_2,
+  DEMO_LOAN_3,
+  DEMO_LOAN_4,
+];
 
 export type LoanScenario = 'multi' | 'one' | 'active_closed' | 'all_closed' | 'none' | 'new_loan';
 
@@ -393,7 +446,8 @@ function pickScenario(): Loan[] {
     case 'new_loan':
       return [NEW_LOAN];
     default:
-      return [REGULAR_LOAN, TWO_WHEELER_LOAN, CLOSED_LOAN]; // multi: two active (one overdue) + one closed
+      // multi: six active (two overdue) + one closed loan (the closed one must never show on Home)
+      return [DEMO_LOAN_1, DEMO_LOAN_2, DEMO_LOAN_3, DEMO_LOAN_4, REGULAR_LOAN, TWO_WHEELER_LOAN, CLOSED_LOAN];
   }
 }
 

@@ -47,8 +47,8 @@ export function ScreenHeader({ title, fallbackHref = '/account', onBack }: Scree
         accessibilityRole="header"
         style={{
           color: theme.colors.textPrimary,
-          fontSize: theme.typography.size.subtitle,
-          fontWeight: theme.typography.weight.semibold,
+          fontSize: theme.golden.type.lead,
+          fontWeight: theme.typography.weight.bold,
         }}
       >
         {title}

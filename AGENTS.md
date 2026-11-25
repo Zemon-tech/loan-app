@@ -1,18 +1,29 @@
-# AGENTS.md — Loan App (NBFC Customer Tracker)
+# AGENTS.md — Loan App (NBFC Customer App)
 
 Quick orientation + working rules. Authoritative spec: [`PRD.md`](./PRD.md).
 
 ## What we're building
 
-A **read-only** customer loan tracker for an Indian NBFC. Customer logs in with mobile OTP,
-views their loans: outstanding balance, EMI schedule, charges, payment history.
+A customer loan app for an Indian NBFC. Customer logs in with mobile OTP, views their loans
+(outstanding balance, EMI schedule, charges, payment history) and, **once the payment feature is
+built, pays their dues in the app** (owner decision 2026-11-25; this replaces the earlier
+"tracker only, never moves money" rule in PRD Section 0, rule 11. The PRD is not yet updated).
 
-- **Tracker only, every phase — NEVER moves money.** No payment button/link/gateway/UPI/QR/
-  bank details, no loan application, no offers/ads, no collection actions. If a task seems to
-  need one, stop and flag it in `docs/DECISIONS.md`. (PRD Section 0, rule 11.)
-- Mobile talks **only** to our API (HTTPS + JWT), never the DB. API reads the client DB
-  read-only via repositories, scoped by `customerId` on every query, whitelisted fields only.
-
+- **Payments are in scope.** The loan overview already has a `Pay now` button (`showPayNow()` in
+  `apps/mobile/src/features/api/features.ts`) that does nothing yet; the real flow replaces it.
+  Still out of scope unless the owner says otherwise: loan applications, offers/ads, collection
+  actions (recovery visits etc.).
+- **Payment rules (when building it):** money moves only through a licensed payment gateway with
+  its hosted checkout/SDK; the app never sees, stores or logs card numbers, UPI PINs, bank
+  credentials or OTPs; the amount is decided and the payment verified **server-side** (never
+  trust a client amount or a client "success"); every create/confirm call is idempotent; amounts
+  stay integer paise; show clear pending / success / failed states; log payment ids and states
+  only, no PII. Design it in `contracts/openapi.yaml` first and record the gateway choice and flow
+  in `docs/DECISIONS.md`. Update the overview footer text and store listings that say the app does
+  not take payments.
+- Mobile talks **only** to our API (HTTPS + JWT), never the DB. The API reads the client DB
+  read-only via repositories (payments are written to the app-owned `mobile_app` schema, never to
+  the client DB), scoped by `customerId` on every query, whitelisted fields only.
 ## Structure (npm workspaces)
 
 ```
@@ -75,8 +86,8 @@ test), then import it. New shared behaviour must ship with a Vitest test (`npm t
 ## Phases
 
 0 Foundation (monorepo, schedule calc + golden tests, mobile on mock data) · 1 MVP (API +
-OTP, all screens, store assets) · 2 Push, Hindi, offline cache · 3 Optional docs. Payments
-never in scope.
+OTP, all screens, store assets) · 2 Push, Hindi, offline cache · 3 Optional docs · Payments
+(in-app payment of dues; design and gateway choice pending, see above).
 
 ## Working rules
 

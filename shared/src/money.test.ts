@@ -7,6 +7,9 @@ import {
   paiseToWholeRupees,
   assertPaise,
   isValidPaise,
+  totalPayablePaise,
+  interestChargedPaise,
+  wholeInstallmentsIn,
 } from './money.js';
 
 describe('formatINR (PRD 18.1 expected values)', () => {
@@ -61,4 +64,58 @@ describe('paise helpers', () => {
     expect(() => assertPaise(100.5)).toThrow(TypeError);
     expect(assertPaise(100)).toBe(100);
   });
+});
+describe('totalPayablePaise', () => {
+  it('multiplies the instalment by the number of instalments in paise', () => {
+    expect(totalPayablePaise(20000, 120)).toBe(2400000);
+    expect(totalPayablePaise(15000, 80)).toBe(1200000);
+    expect(totalPayablePaise(300000, 60)).toBe(18000000);
+  });
+
+  it.each([
+    [0, 10],
+    [-100, 10],
+    [20000, 0],
+    [20000, -5],
+    [20000, 12.5],
+    [20000, null],
+    [20000, undefined],
+    [20000.5, 10],
+    [Number.MAX_SAFE_INTEGER, 2],
+  ])('returns null for emi=%j installments=%j', (emi, n) => {
+    expect(totalPayablePaise(emi as number, n as number | null | undefined)).toBeNull();
+  });
+});
+
+describe('interestChargedPaise', () => {
+  it('is total payable minus the loan amount', () => {
+    expect(interestChargedPaise(20000, 120, 2000000)).toBe(400000);
+    expect(interestChargedPaise(300000, 60, 15000000)).toBe(3000000);
+  });
+  it('is zero when there is no interest', () => {
+    expect(interestChargedPaise(10000, 10, 100000)).toBe(0);
+  });
+  it.each([
+    [20000, null, 2000000],
+    [20000, 120, null],
+    [20000, 120, 0],
+    [0, 120, 2000000],
+    [20000, 100, 2500000], // total below loan amount -> never negative
+  ])('returns null for emi=%j n=%j principal=%j', (emi, n, principal) => {
+    expect(interestChargedPaise(emi, n as number | null, principal as number | null)).toBeNull();
+  });
+});
+
+describe('wholeInstallmentsIn', () => {
+  it('counts exact multiples', () => {
+    expect(wholeInstallmentsIn(40000, 20000)).toBe(2);
+    expect(wholeInstallmentsIn(0, 20000)).toBe(0);
+    expect(wholeInstallmentsIn(3800000, 50000)).toBe(76);
+  });
+  it.each([[45000, 20000], [40000, 0], [-20000, 20000], [40000.5, 20000]])(
+    'returns null for amount=%j emi=%j',
+    (amount, emi) => {
+      expect(wholeInstallmentsIn(amount, emi)).toBeNull();
+    },
+  );
 });

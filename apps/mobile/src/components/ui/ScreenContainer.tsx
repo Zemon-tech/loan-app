@@ -9,11 +9,13 @@
  * is safe if the window does resize (no double offset) and when the view sits above a tab bar.
  * (Do not set android `softwareKeyboardLayoutMode: pan` together with this.)
  */
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
   ScrollView,
+  StyleSheet,
   View,
   type RefreshControlProps,
   type StyleProp,
@@ -80,13 +82,21 @@ export function ScreenContainer({
       behavior="padding"
       style={{ flex: 1, backgroundColor: theme.colors[tone] }}
     >
+      {theme.gradient ? (
+        <LinearGradient
+          pointerEvents="none"
+          colors={theme.gradient.colors}
+          locations={theme.gradient.locations}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       {header ? (
         <View
           style={{
             paddingHorizontal: theme.spacing.lg,
             paddingTop: insets.top + theme.spacing.sm,
             paddingBottom: theme.spacing.md,
-            backgroundColor: theme.colors[tone],
+            backgroundColor: theme.gradient ? 'transparent' : theme.colors[tone],
             zIndex: 10,
           }}
         >

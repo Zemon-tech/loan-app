@@ -75,11 +75,11 @@ export function OtpInput({
     <Pressable
       onPress={() => inputRef.current?.focus()}
       accessible={false}
-      style={{ height: 56 }}
+      style={{ height: theme.golden.controlHeight }}
     >
       <Animated.View
         style={[
-          { flexDirection: 'row', gap: theme.spacing.sm, height: 56 },
+          { flexDirection: 'row', gap: theme.spacing.sm, height: theme.golden.controlHeight },
           shakeStyle,
         ]}
         pointerEvents="none"
@@ -87,11 +87,8 @@ export function OtpInput({
         {Array.from({ length }).map((_, i) => {
           const char = value[i];
           const isActive = focused && i === activeIndex;
-          const borderColor = hasError
-            ? theme.colors.danger
-            : isActive
-              ? theme.colors.primary
-              : 'transparent';
+          // Every cell has a visible brand-yellow outline; the active one is thicker, errors turn red.
+          const borderColor = hasError ? theme.colors.danger : theme.colors.primary;
 
           return (
             <View
@@ -101,7 +98,7 @@ export function OtpInput({
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: theme.radius.lg,
-                borderWidth: 1.5,
+                borderWidth: isActive && !hasError ? 2.5 : 1.5,
                 borderColor,
                 backgroundColor: char || isActive ? theme.colors.card : theme.colors.primarySoft,
               }}

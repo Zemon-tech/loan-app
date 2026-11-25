@@ -68,6 +68,15 @@ export interface LoanListItemVM {
    * detail's `nextCollectionDate` (weekly loans only).
    */
   nextDueDate?: IsoDate | null;
+  /**
+   * Home-table details (loan date, end date, loan amount, number of instalments). Mock mode fills
+   * them; LIVE list responses carry none (left undefined), so Home reads them from the loan
+   * detail (loanDate, maturityDate, financedAmount, numberOfInstallments).
+   */
+  loanDate?: IsoDate | null;
+  maturityDate?: IsoDate | null;
+  principalPaise?: Paise;
+  numberOfInstallments?: number | null;
 }
 
 export interface LoanDetailVM extends LoanListItemVM {

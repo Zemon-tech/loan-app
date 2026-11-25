@@ -102,7 +102,7 @@ export default function DeleteAccountScreen() {
           <Text
             accessibilityRole="header"
             accessibilityLiveRegion="polite"
-            style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.heading, fontWeight: theme.typography.weight.bold }}
+            style={{ color: theme.colors.textPrimary, fontSize: theme.golden.type.heading, fontWeight: theme.typography.weight.bold }}
           >
             Request received
           </Text>
@@ -177,7 +177,7 @@ export default function DeleteAccountScreen() {
         <StepBar label="Step 2 of 2" trailing="Verify it's you" ratio={1} />
 
         <View style={{ gap: theme.spacing.sm }}>
-          <Text accessibilityRole="header" style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.heading, fontWeight: theme.typography.weight.bold }}>
+          <Text accessibilityRole="header" style={{ color: theme.colors.textPrimary, fontSize: theme.golden.type.heading, fontWeight: theme.typography.weight.bold }}>
             Verify it&apos;s you
           </Text>
           <Text style={bodyText}>
@@ -225,7 +225,7 @@ export default function DeleteAccountScreen() {
         <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: theme.colors.dangerSoft, alignItems: 'center', justifyContent: 'center' }}>
           <IconTile name="shield-half-outline" size={52} background="dangerSoft" color="danger" />
         </View>
-        <Text accessibilityRole="header" style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.heading, fontWeight: theme.typography.weight.bold, textAlign: 'center' }}>
+        <Text accessibilityRole="header" style={{ color: theme.colors.textPrimary, fontSize: theme.golden.type.heading, fontWeight: theme.typography.weight.bold, textAlign: 'center' }}>
           Delete your account
         </Text>
         <Text style={[bodyText, { textAlign: 'center' }]}>

@@ -131,6 +131,7 @@ export default function LoginScreen() {
             color: theme.colors.textPrimary,
             fontSize: golden.type.heading,
             fontWeight: theme.typography.weight.bold,
+            textAlign: 'center',
           }}
         >
           Welcome
@@ -221,7 +222,7 @@ export default function LoginScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: golden.spacing.f1 }}>
               <Icon name="shield-outline" size={golden.type.body} color="primary" />
               <Text style={[bodyText, { flexShrink: 1 }]}>
-                We will send a 6-digit verification code via SMS
+                We&apos;ll SMS you a 6-digit code
               </Text>
             </View>
           )}

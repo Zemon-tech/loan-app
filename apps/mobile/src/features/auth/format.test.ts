@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   mobileCheckMessage,
+  extractOtp,
   normalizeMobile,
   otpRequestErrorMessage,
   validateMobile,
@@ -60,5 +61,30 @@ describe('messages', () => {
     expect(otpRequestErrorMessage('RATE_LIMITED')).toMatch(/Too many attempts/);
     expect(otpRequestErrorMessage('SERVER')).toBe('Something went wrong. Please try again.');
     expect(otpRequestErrorMessage('ADAPTER')).toBe('Something went wrong. Please try again.');
+  });
+});
+describe('extractOtp', () => {
+  it.each([
+    ['123456', '123456'],
+    [' 123456 ', '123456'],
+    ['123 456', '123456'],
+    ['123-456', '123456'],
+    ['123456 is your verification code', '123456'],
+    ['Your code 123456. Do not share. 123456', '123456'],
+  ])('accepts %j', (input, expected) => {
+    expect(extractOtp(input)).toBe(expected);
+  });
+
+  it.each([
+    [''],
+    [null],
+    [undefined],
+    ['12345'],
+    ['1234567'],
+    ['abc123'],
+    ['code 123456 or 654321'],
+    ['call 9876543210'],
+  ])('rejects %j', (input) => {
+    expect(extractOtp(input as string | null | undefined)).toBeNull();
   });
 });
