@@ -2,125 +2,159 @@
  * S2: Login (mobile number) — PRD 8.2.
  * One field, one button. No sign-up, no promotions, no payment.
  *
- * TODO (M-02):
- *  - POST /v1/auth/otp/request; pass otpRequestId + masked mobile to OTP screen
- *  - handle 429 ("Too many attempts. Try again in {n} minutes.")
- *  - copy must NOT reveal whether the number is registered
- *  - all strings move to i18n
+ * Layout follows the golden ratio (AppGolden): brand zone 38.2% / form zone 61.8% of the
+ * usable screen height. Copy must NOT reveal whether the number is registered.
  */
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
-
+import { useRef, useState } from 'react';
+import { Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark, Button, Icon, ScreenContainer } from '@/components/ui';
-import { COMPANY_NAME } from '@/constants/brand';
+import { COMPANY_NAME, COMPANY_PARENT_TAG } from '@/constants/brand';
 import { apiMode } from '@/features/api/config';
 import * as endpoints from '@/features/api/endpoints';
-import { friendlyMessage } from '@/features/api/errors';
-import { formatMobileInput, INDIAN_MOBILE, sanitizeMobile } from '@/features/auth/format';
+import {
+  formatMobileInput,
+  mobileCheckMessage,
+  normalizeMobile,
+  otpRequestErrorMessage,
+  validateMobile,
+} from '@/features/auth/format';
 import { useSession } from '@/features/auth/session';
 import { useAppTheme } from '@/hooks/use-theme';
+import { logger } from '@/lib/logger';
+
+const GENERIC_ERROR = 'Something went wrong. Please try again.';
 
 export default function LoginScreen() {
   const theme = useAppTheme();
+  const { golden } = theme;
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { startLogin } = useSession();
   const [digits, setDigits] = useState('');
   const [focused, setFocused] = useState(false);
+  const [touched, setTouched] = useState(false); // blurred once, or Continue tapped
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const inFlight = useRef(false); // double-tap guard (state updates are async)
 
-  const isValid = INDIAN_MOBILE.test(digits);
-  const showError = (digits.length === 10 && !isValid) || serverError !== null;
-  const errorText = serverError ?? 'Enter a valid 10-digit mobile number.';
+  const check = validateMobile(digits);
+  // Wrong first digit shows at once; "too short" / "empty" wait for blur or Continue.
+  const checkText = check === 'BAD_START' || touched ? mobileCheckMessage(check) : null;
+  const errorText = serverError ?? checkText;
+
+  // Usable height split by the golden ratio (zones grow, never clip, at large font sizes).
+  const usable = Math.max(
+    height - insets.top - insets.bottom - theme.spacing.sm - theme.spacing.xl,
+    0,
+  );
+  const brandMinHeight = Math.round(usable * golden.split.brand);
+  const formMinHeight = Math.round(usable * golden.split.form);
 
   async function onContinue() {
-    if (!isValid || submitting) return;
-    startLogin(`+91${digits}`);
+    if (inFlight.current) return;
+    setTouched(true);
+    if (check !== 'OK') return;
+    inFlight.current = true;
     setServerError(null);
-
-    // Mock mode keeps the instant, backend-free flow.
-    if (apiMode() === 'mock') {
-      router.push('/otp');
-      return;
+    try {
+      // Mock mode (dev only) keeps the instant, backend-free flow.
+      if (apiMode() === 'mock') {
+        startLogin(`+91${digits}`);
+        router.push('/otp');
+        return;
+      }
+      setSubmitting(true);
+      logger.info('login', 'otp_request_started');
+      const res = await endpoints.otpRequest(digits);
+      if (res.ok) {
+        logger.info('login', 'otp_request_succeeded');
+        // 202: session state is set only after success; neutral copy on the OTP screen.
+        startLogin(`+91${digits}`);
+        router.push('/otp');
+        return;
+      }
+      setServerError(otpRequestErrorMessage(res.error.kind));
+    } catch {
+      logger.error('login', 'otp_request_unexpected_error');
+      setServerError(GENERIC_ERROR);
+    } finally {
+      inFlight.current = false;
+      setSubmitting(false);
     }
-
-    setSubmitting(true);
-    const res = await endpoints.otpRequest(digits);
-    setSubmitting(false);
-
-    if (res.ok) {
-      // 202 — neutral copy on the OTP screen; never reveal registration status.
-      router.push('/otp');
-      return;
-    }
-    if (res.error.kind === 'BAD_REQUEST') {
-      setServerError('Enter a valid 10-digit mobile number.');
-      return;
-    }
-    setServerError(friendlyMessage(res.error));
   }
 
-  const caption = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption };
+  const bodyText = { color: theme.colors.textSecondary, fontSize: golden.type.body };
 
   return (
-    <ScreenContainer tone="canvas" scrollToEndOnKeyboard contentStyle={{ justifyContent: 'space-between' }}>
-      <View style={{ alignItems: 'center', gap: theme.spacing.md, paddingTop: theme.spacing.xl }}>
-        <BrandMark size={120} />
-        <Text
-          accessibilityRole="header"
-          style={{
-            color: theme.colors.textPrimary,
-            fontSize: theme.typography.size.subtitle,
-            fontWeight: theme.typography.weight.bold,
-            letterSpacing: 1,
-            textAlign: 'center',
-          }}
-        >
-          {COMPANY_NAME}
-        </Text>
-      </View>
-
-      <View style={{ gap: theme.spacing.lg }}>
-        <View style={{ gap: theme.spacing.sm }}>
+    <ScreenContainer tone="canvas" scrollToEndOnKeyboard contentStyle={{ gap: 0 }}>
+      <View
+        style={{
+          minHeight: brandMinHeight,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: golden.spacing.f1,
+        }}
+      >
+        <BrandMark size={golden.spacing.f5 + golden.spacing.f4 + golden.spacing.f3 + golden.spacing.f1} />
+        <View style={{ alignItems: 'center', gap: theme.spacing.xs }}>
           <Text
             accessibilityRole="header"
             style={{
               color: theme.colors.textPrimary,
-              fontSize: theme.typography.size.heading,
+              fontSize: theme.typography.size.subtitle,
               fontWeight: theme.typography.weight.bold,
+              letterSpacing: 1,
+              textAlign: 'center',
             }}
           >
-            Welcome
+            {COMPANY_NAME}
           </Text>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 }}>
-            Enter your registered mobile number to view your loan records and repayment statements.
+          <Text
+            style={{
+              color: theme.colors.textPrimary,
+              fontSize: golden.type.small,
+              fontWeight: theme.typography.weight.medium,
+              textAlign: 'center',
+            }}
+          >
+            {COMPANY_PARENT_TAG}
           </Text>
         </View>
+      </View>
 
-        <View style={{ gap: theme.spacing.sm }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text
-              style={{
-                color: theme.colors.textPrimary,
-                fontSize: theme.typography.size.caption,
-                fontWeight: theme.typography.weight.medium,
-              }}
-            >
-              Registered Mobile Number
-            </Text>
-            <Text style={caption}>{digits.length}/10</Text>
-          </View>
-
+      <View style={{ minHeight: formMinHeight, justifyContent: 'center', gap: golden.spacing.f3 }}>
+        <Text
+          accessibilityRole="header"
+          style={{
+            color: theme.colors.textPrimary,
+            fontSize: golden.type.heading,
+            fontWeight: theme.typography.weight.bold,
+          }}
+        >
+          Welcome
+        </Text>
+        <View style={{ gap: golden.spacing.f1 }}>
+          <Text
+            style={{
+              color: theme.colors.textPrimary,
+              fontSize: golden.type.body,
+              fontWeight: theme.typography.weight.medium,
+            }}
+          >
+            Mobile number
+          </Text>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              minHeight: 56,
-              paddingHorizontal: theme.spacing.lg,
+              minHeight: golden.controlHeight,
+              paddingHorizontal: golden.spacing.f2,
               borderRadius: theme.radius.lg,
               backgroundColor: theme.colors.primarySoft,
               borderWidth: 1.5,
-              borderColor: showError
+              borderColor: errorText
                 ? theme.colors.danger
                 : focused
                   ? theme.colors.primary
@@ -132,7 +166,7 @@ export default function LoginScreen() {
             </Text>
             <Text
               style={{
-                marginLeft: theme.spacing.sm,
+                marginLeft: golden.spacing.f1,
                 color: theme.colors.textPrimary,
                 fontSize: theme.typography.size.subtitle,
                 fontWeight: theme.typography.weight.medium,
@@ -143,24 +177,27 @@ export default function LoginScreen() {
             <View
               style={{
                 width: 1,
-                height: 24,
-                marginHorizontal: theme.spacing.md,
+                height: golden.spacing.f3,
+                marginHorizontal: golden.spacing.f2,
                 backgroundColor: theme.colors.border,
               }}
             />
             <TextInput
               value={formatMobileInput(digits)}
               onChangeText={(t) => {
-                setDigits(sanitizeMobile(t));
+                setDigits(normalizeMobile(t));
                 if (serverError) setServerError(null);
               }}
               onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
+              onBlur={() => {
+                setFocused(false);
+                setTouched(true);
+              }}
               onSubmitEditing={onContinue}
               keyboardType="number-pad"
               textContentType="telephoneNumber"
               autoComplete="tel"
-              maxLength={11}
+              maxLength={24} // room to paste '+91 98765 43210'; normalised to 10 digits
               placeholder="98765 43210"
               placeholderTextColor={theme.colors.textSecondary}
               returnKeyType="done"
@@ -168,27 +205,28 @@ export default function LoginScreen() {
                 flex: 1,
                 fontSize: theme.typography.size.subtitle,
                 color: theme.colors.textPrimary,
-                paddingVertical: theme.spacing.md,
+                paddingVertical: golden.spacing.f2,
               }}
-              accessibilityLabel="Registered mobile number, 10 digits"
+              accessibilityLabel="Mobile number, 10 digits"
             />
           </View>
-
-          {showError ? (
-            <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.danger, fontSize: theme.typography.size.caption }}>
+          {errorText ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={{ color: theme.colors.danger, fontSize: golden.type.body }}
+            >
               {errorText}
             </Text>
           ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-              <Icon name="shield-outline" size={16} color="primary" />
-              <Text style={[caption, { flexShrink: 1 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: golden.spacing.f1 }}>
+              <Icon name="shield-outline" size={golden.type.body} color="primary" />
+              <Text style={[bodyText, { flexShrink: 1 }]}>
                 We will send a 6-digit verification code via SMS
               </Text>
             </View>
           )}
         </View>
-
-        <Button label="Continue" rightIcon="arrow-forward" onPress={onContinue} disabled={!isValid || submitting} loading={submitting} />
+        <Button label="Continue" rightIcon="arrow-forward" onPress={onContinue} disabled={submitting} loading={submitting} />
       </View>
     </ScreenContainer>
   );

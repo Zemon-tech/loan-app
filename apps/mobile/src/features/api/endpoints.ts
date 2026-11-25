@@ -16,6 +16,7 @@ import { request } from './client';
 import { getDeviceId } from './deviceId';
 import { AdapterError, type ApiResult } from './errors';
 import { getAccessToken } from './tokenStore';
+import { logger } from '@/lib/logger';
 import type {
   BorrowerProfileVM,
   LoanDetailVM,
@@ -33,11 +34,19 @@ import type {
 } from './wireTypes';
 
 /** POST /api/v1/auth/otp/request */
-export function otpRequest(mobileNumber: string): Promise<ApiResult<OtpRequestAccepted>> {
-  return request<OtpRequestAccepted>('/api/v1/auth/otp/request', {
-    method: 'POST',
-    body: { mobileNumber },
-  });
+export async function otpRequest(mobileNumber: string): Promise<ApiResult<OtpRequestAccepted>> {
+  try {
+    const res = await request<OtpRequestAccepted>('/api/v1/auth/otp/request', {
+      method: 'POST',
+      body: { mobileNumber },
+    });
+    if (!res.ok) logger.warn('auth', 'otp_request_failed', { kind: res.error.kind });
+    return res;
+  } catch {
+    // request() should not throw; if it does (e.g. bad base URL), fail closed with a typed error.
+    logger.error('auth', 'otp_request_threw');
+    return { ok: false, error: { kind: 'NETWORK' } };
+  }
 }
 
 /** POST /api/v1/auth/otp/verify. `dateOfBirth` (yyyy-MM-dd) only when the API asked for it. */

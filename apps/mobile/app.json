@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "loantracker",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -32,6 +32,7 @@
         "backgroundColor": "#fddc69",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
+      "userInterfaceStyle": "light",
       "predictiveBackGestureEnabled": false
     },
     "web": {

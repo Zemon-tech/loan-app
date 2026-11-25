@@ -1,14 +1,17 @@
 /**
- * Theme hook for the loan app. Light/dark follows the system setting.
- * Learn more: https://docs.expo.dev/guides/color-schemes/
+ * Theme hook for the loan app. The app is LIGHT ONLY for now (docs/DECISIONS.md).
+ * Dark tokens stay in `AppColors.dark`; a future in-app toggle only needs to change
+ * `resolveScheme()` (e.g. read a stored preference) - no screen changes.
  */
+import { getAppTheme, type AppColorScheme, type AppTheme } from '@/constants/theme';
 
-import { getAppTheme, type AppTheme } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+/** Single place that decides the active colour scheme. */
+export function resolveScheme(): AppColorScheme {
+  return 'light';
+}
 
 /**
- * useAppTheme — returns the loan app's design-token theme (PRD 6.4), following the
- * system light/dark setting. Use this in loan-app components:
+ * useAppTheme - returns the loan app's design-token theme (PRD 6.4). Use this in components:
  *
  *   const theme = useAppTheme();
  *   const styles = StyleSheet.create({
@@ -16,6 +19,5 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
  *   });
  */
 export function useAppTheme(): AppTheme {
-  const scheme = useColorScheme();
-  return getAppTheme(scheme === 'dark' ? 'dark' : 'light');
+  return getAppTheme(resolveScheme());
 }

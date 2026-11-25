@@ -11,8 +11,18 @@ export type ApiMode = 'mock' | 'live';
 
 const DEFAULT_BASE_URL = 'https://online.alangcredits.com';
 
+/**
+ * Fake data is a dev-only tool. Mock mode needs BOTH a dev build (__DEV__) and an explicit
+ * EXPO_PUBLIC_API_MODE=mock. Anything else (release builds, unset or unknown value) is live,
+ * so a build made without the variable can never show mock loans to a real customer.
+ */
 export function apiMode(): ApiMode {
-  return process.env.EXPO_PUBLIC_API_MODE === 'live' ? 'live' : 'mock';
+  return __DEV__ && process.env.EXPO_PUBLIC_API_MODE === 'mock' ? 'mock' : 'live';
+}
+
+/** True when a release build was configured for mock mode (it is ignored; logged at startup). */
+export function mockRequestedInRelease(): boolean {
+  return !__DEV__ && process.env.EXPO_PUBLIC_API_MODE === 'mock';
 }
 
 /**

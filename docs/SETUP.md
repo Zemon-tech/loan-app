@@ -169,7 +169,7 @@ The mobile app talks to the real Borrower API behind the `EXPO_PUBLIC_API_MODE` 
 
 ```bash
 # apps/mobile/.env  (copy from .env.example)
-EXPO_PUBLIC_API_MODE=live                         # or `mock` (default) for the prototype
+EXPO_PUBLIC_API_MODE=live                         # `mock` works ONLY in dev builds; release builds are always live
 EXPO_PUBLIC_API_BASE_URL=https://online.alangcredits.com   # ORIGIN ONLY — a path segment throws at startup
 EXPO_PUBLIC_INTEGRITY_ENABLED=false               # Play Integrity (client WARN only)
 # EXPO_PUBLIC_INTEGRITY_CLOUD_PROJECT_NUMBER=      # fill in when the lender provides it

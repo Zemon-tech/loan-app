@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -8,9 +8,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppColors } from '@/constants/theme';
 import { queryClient, setupQueryManagers } from '@/features/api/queryClient';
+import { mockRequestedInRelease } from '@/features/api/config';
 import { SessionProvider, useSession } from '@/features/auth/session';
 import { PreferencesProvider } from '@/features/settings/preferences';
 import { useAppTheme } from '@/hooks/use-theme';
+import { logger } from '@/lib/logger';
 
 // Keep the NATIVE splash up until the stored session has been checked (module scope, not awaited).
 void SplashScreen.preventAutoHideAsync();
@@ -20,7 +22,7 @@ const SPLASH_MAX_MS = 10_000;
 
 /** Navigation chrome (screen backgrounds, transitions) built from the app tokens. */
 function navigationTheme(scheme: 'light' | 'dark') {
-  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const base = DefaultTheme; // light only; see resolveScheme()
   const c = AppColors[scheme];
   return {
     ...base,
@@ -95,6 +97,12 @@ export default function RootLayout() {
 
   // Wire onlineManager + focusManager once at startup.
   useEffect(() => setupQueryManagers(), []);
+  // A release build must never run on fake data; apiMode() already forces live, so just report it.
+  useEffect(() => {
+    if (mockRequestedInRelease()) {
+      logger.error('startup', 'mock_mode_requested_in_release', { forcedMode: 'live' });
+    }
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -103,7 +111,7 @@ export default function RootLayout() {
           <PreferencesProvider>
             <ThemeProvider value={navigationTheme(scheme)}>
               <RootNavigator />
-              <StatusBar style="auto" />
+              <StatusBar style="dark" />
             </ThemeProvider>
           </PreferencesProvider>
         </QueryClientProvider>

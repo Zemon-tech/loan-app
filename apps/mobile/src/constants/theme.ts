@@ -167,6 +167,21 @@ export const AppTypography = {
 export const AppTouchTarget = { min: 44 } as const;
 
 /**
+ * Golden-ratio tokens (phi ~ 1.618). Used by the login screen; existing tokens are unchanged.
+ * - split: screen height divided 38.2% (brand zone) / 61.8% (form zone).
+ * - spacing: Fibonacci steps.
+ * - type: body 16 -> heading 26 (16 x phi); small is the 12px readability floor.
+ * - controlHeight: 55 (34 x phi), above the 44pt touch minimum.
+ */
+export const AppGolden = {
+  ratio: 1.618,
+  split: { brand: 0.382, form: 0.618 },
+  spacing: { f1: 8, f2: 13, f3: 21, f4: 34, f5: 55 },
+  type: { small: 12, body: 16, heading: 26 },
+  controlHeight: 55,
+} as const;
+
+/**
  * Motion tokens (impeccable-native motion vocabulary).
  * Timing and spring presets for 60-120Hz native animations.
  */
@@ -212,6 +227,7 @@ export type AppTheme = {
   typography: typeof AppTypography;
   touchTarget: typeof AppTouchTarget;
   motion: typeof AppMotion;
+  golden: typeof AppGolden;
 };
 
 export function getAppTheme(scheme: AppColorScheme): AppTheme {
@@ -223,5 +239,6 @@ export function getAppTheme(scheme: AppColorScheme): AppTheme {
     typography: AppTypography,
     touchTarget: AppTouchTarget,
     motion: AppMotion,
+    golden: AppGolden,
   };
 }
