@@ -31,7 +31,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) 
         paddingBottom: insets.bottom + theme.spacing.sm,
       }}
     >
-      <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: theme.spacing.sm }}>        {state.routes.map((route, index) => {
+      <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+        {state.routes.map((route, index) => {
           const { options } = descriptors[route.key]!;
           // Screens hidden with `href: null` get display: none from Expo Router.
           if ((options.tabBarItemStyle as { display?: string } | undefined)?.display === 'none') {
