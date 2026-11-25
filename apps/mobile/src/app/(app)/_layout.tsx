@@ -20,7 +20,6 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="loan/[loanId]" options={{ headerShown: false }} />
       <Stack.Screen name="account/settings" options={{ headerShown: false }} />
-      <Stack.Screen name="account/help" options={{ headerShown: false }} />
       <Stack.Screen name="account/legal" options={{ headerShown: false }} />
       <Stack.Screen name="account/delete" options={{ headerShown: false }} />
     </Stack>

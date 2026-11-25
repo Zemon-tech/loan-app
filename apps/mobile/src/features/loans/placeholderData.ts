@@ -283,7 +283,7 @@ const REGULAR_LOAN = buildLoan({
   overdueInterest: 1267,
   recoveryCharges: 500,
   discount: 1000,
-  totalPaid: 29000,
+  totalPaid: 39000, // 32 EMIs of 1,200 + a 600 part-payment, so the summary rows reconcile
   paidOnline: { amount: 24000, count: 26 },
   paidCash: { amount: 5000, count: 6 },
   lastPayment: { date: d(2026, 9, 11), amount: 5000 },

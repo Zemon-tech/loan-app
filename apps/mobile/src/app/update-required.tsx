@@ -4,6 +4,7 @@
  */
 import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Text, View } from 'react-native';
 
 import { Button, Card, Icon, IconTile, Pill, ScreenContainer } from '@/components/ui';
@@ -13,6 +14,7 @@ import { useAppTheme } from '@/hooks/use-theme';
 
 export default function UpdateRequiredScreen() {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const [config, setConfig] = useState<BootConfig | null>(null);
   const installed = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -26,19 +28,19 @@ export default function UpdateRequiredScreen() {
   return (
     <ScreenContainer tone="canvas">
       <View style={{ alignItems: 'center', gap: theme.spacing.lg, marginTop: theme.spacing.xl }}>
-        <Pill icon="shield-checkmark-outline" label="Security update" color="primary" uppercase />
+        <Pill icon="shield-checkmark-outline" label={t('update.pill')} color="primary" uppercase />
         <IconTile name="sync-circle-outline" size={88} badge="lock-closed" badgeBackground="primary" badgeColor="onPrimary" />
         <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
           <Text
             accessibilityRole="header"
             style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.title + 2, fontWeight: theme.typography.weight.bold }}
           >
-            Update required
+            {t('update.title')}
           </Text>
           <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 }}>
             {update
-              ? `A mandatory security and performance update (v${update.latestVersion}) is required to safely access your loan details and transaction history.`
-              : 'A mandatory update is required to continue.'}
+              ? t('update.bodyWith', { version: update.latestVersion })
+              : t('update.bodyNo')}
           </Text>
         </View>
       </View>
@@ -47,9 +49,9 @@ export default function UpdateRequiredScreen() {
         <Card tone="card" style={{ gap: theme.spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.semibold }}>
-              What&apos;s new
+              {t('update.whatsNew')}
             </Text>
-            <Pill label={`v${update.latestVersion} release`} color="success" background="successSoft" />
+            <Pill label={t('update.release', { version: update.latestVersion })} color="success" background="successSoft" />
           </View>
           {update.notes.map((note) => (
             <View key={note} style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
@@ -74,21 +76,21 @@ export default function UpdateRequiredScreen() {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
           <Icon name="wifi" size={18} color="textSecondary" />
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>Best on Wi-Fi</Text>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>{t('update.wifi')}</Text>
         </View>
         {update ? (
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-            Size: {update.sizeText}
+            {t('update.size', { size: update.sizeText })}
           </Text>
         ) : null}
       </View>
 
-      <Button label="Update app" leftIcon="download-outline" onPress={() => Linking.openURL(store)} />
+      <Button label={t('update.button')} leftIcon="download-outline" onPress={() => Linking.openURL(store)} />
 
       <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-          Current installed: v{installed}
-          {update ? ` \u2022 Latest: v${update.latestVersion}` : ''}
+          {t('update.installed', { version: installed })}
+          {update ? t('update.latest', { version: update.latestVersion }) : ''}
         </Text>
       </View>
     </ScreenContainer>

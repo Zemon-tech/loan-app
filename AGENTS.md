@@ -101,6 +101,7 @@ OTP, all screens, store assets) · 2 Push, Hindi, offline cache · 3 Optional do
    `DECISIONS.md`, continue.
 5. **Verify before done:** lint + `npx tsc --noEmit` + tests where they exist. Exit 0 ≠ done —
    check against PRD Section 20 acceptance criteria.
+6. **Text is translated.** Every user-facing string goes through `t('key')` (react-i18next). Add the key to **both** `apps/mobile/src/i18n/en.ts` and `hi.ts` (`npm test` in `apps/mobile` fails if they differ). Never concatenate sentences; use `{{placeholders}}`. Keep EMI, OTP, UPI, Tut in English and digits 0-9. Map API values by code (see `DECISIONS.md`), never translate server sentences.
 
 ## ✅ Resolved — DB engine is MySQL
 

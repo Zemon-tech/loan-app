@@ -12,6 +12,7 @@
  * Anything missing renders as a dash; the table never invents a value.
  */
 import { Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { formatDate, formatINR, totalPayablePaise, type IsoDate, type Paise } from '@app/shared';
 
@@ -70,6 +71,7 @@ export function LoansTable({
   onOpen: (loanId: string) => void;
 }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const header = {
     color: theme.colors.textSecondary,
     fontSize: theme.typography.size.caption,
@@ -96,9 +98,9 @@ export function LoansTable({
           backgroundColor: theme.colors.primarySoft,
         }}
       >
-        <Text style={[header, { flex: LOAN_TABLE_COLUMNS.loan }]}>Loan no.</Text>
-        <Text style={[header, { flex: LOAN_TABLE_COLUMNS.amount }]}>Amount</Text>
-        <Text style={[header, { flex: LOAN_TABLE_COLUMNS.emi }]}>EMI x Tenure</Text>
+        <Text style={[header, { flex: LOAN_TABLE_COLUMNS.loan }]}>{t('table.loanNo')}</Text>
+        <Text style={[header, { flex: LOAN_TABLE_COLUMNS.amount }]}>{t('table.amount')}</Text>
+        <Text style={[header, { flex: LOAN_TABLE_COLUMNS.emi }]}>{t('table.emiTenure')}</Text>
       </View>
       {loans.map((loan, index) => (
         <LoanTableRow
@@ -122,14 +124,15 @@ function LoanTableRow({
   onPress: () => void;
 }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const { loanDate, maturityDate, principalPaise, tenure } = useRowDetails(loan);
   const overdue = loan.isOverdue;
 
   const emiText = loan.emiAmountPaise > 0 ? formatINR(loan.emiAmountPaise) : null;
   const total = totalPayablePaise(loan.emiAmountPaise, tenure);
   const amountText = principalPaise != null && principalPaise > 0 ? formatINR(principalPaise) : DASH;
-  const startText = loanDate ? formatDate(loanDate) : DASH;
-  const endText = maturityDate ? formatDate(maturityDate) : DASH;
+  const startText = loanDate ? formatDate(loanDate, theme.language) : DASH;
+  const endText = maturityDate ? formatDate(maturityDate, theme.language) : DASH;
 
   const cell = {
     color: theme.colors.textPrimary,
@@ -139,13 +142,13 @@ function LoanTableRow({
   const sub = { color: theme.colors.textSecondary, fontSize: theme.typography.size.caption } as const;
 
   const a11y = [
-    `Loan ${loan.accountNumber}`,
-    overdue ? 'overdue' : null,
-    loanDate ? `Taken on ${startText}` : null,
-    maturityDate ? `Ends on ${endText}` : null,
-    principalPaise != null && principalPaise > 0 ? `Amount ${amountText}` : null,
-    emiText ? (tenure ? `EMI ${emiText} for ${tenure} instalments` : `EMI ${emiText}`) : null,
-    total != null ? `Total ${formatINR(total)}` : null,
+    t('table.a11yLoan', { n: loan.accountNumber }),
+    overdue ? t('table.a11yOverdue') : null,
+    loanDate ? t('table.takenOn', { date: startText }) : null,
+    maturityDate ? t('table.endsOn', { date: endText }) : null,
+    principalPaise != null && principalPaise > 0 ? t('table.amountA11y', { amount: amountText }) : null,
+    emiText ? (tenure ? t('table.emiFor', { emi: emiText, n: tenure }) : t('table.emiOnly', { emi: emiText })) : null,
+    total != null ? t('table.totalA11y', { amount: formatINR(total) }) : null,
   ]
     .filter(Boolean)
     .join('. ');
@@ -154,7 +157,7 @@ function LoanTableRow({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={a11y}
-      accessibilityHint="Opens loan details"
+      accessibilityHint={t('table.opens')}
       onPress={onPress}
       style={({ pressed }) => ({
         flexDirection: 'row',
@@ -177,7 +180,7 @@ function LoanTableRow({
           {startText}
         </Text>
         <Text numberOfLines={1} style={[sub, { color: theme.colors.interactive }]}>
-          {`Ends ${endText}`}
+          {t('table.ends', { date: endText })}
         </Text>
         {overdue ? (
           <View style={{ marginTop: theme.spacing.xs }}>
@@ -212,6 +215,7 @@ function LoanTableRow({
 /** Colour + icon/dot + text label, never colour alone (PRD 6.4). */
 export function LoanStatusPill({ overdue }: { overdue: boolean }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const color = overdue ? theme.colors.danger : theme.colors.success;
   return (
     <View
@@ -241,7 +245,7 @@ export function LoanStatusPill({ overdue }: { overdue: boolean }) {
           fontWeight: theme.typography.weight.semibold,
         }}
       >
-        {overdue ? 'Overdue' : 'Active'}
+        {overdue ? t('status.overdue') : t('status.active')}
       </Text>
     </View>
   );

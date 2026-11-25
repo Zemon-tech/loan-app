@@ -60,6 +60,12 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
+      ],
+      [
+        "expo-localization",
+        {
+          "supportedLocales": ["en", "hi"]
+        }
       ]
     ],
     "experiments": {

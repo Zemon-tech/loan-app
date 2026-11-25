@@ -4,6 +4,7 @@
  * Rendered once by the workspace layout so it stays put while the segment content changes.
  */
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
 import { Icon, SegmentedControl } from '@/components/ui';
@@ -15,14 +16,15 @@ const SHOW_SEGMENTS = showUnbackedScreens();
 
 export type WorkspaceSegment = 'overview' | 'history';
 
-const TITLES: Record<WorkspaceSegment, string> = {
-  overview: 'Loan overview',
-  history: 'Transaction History',
+/** i18n keys for the page title and the segment labels. */
+const TITLE_KEYS: Record<WorkspaceSegment, string> = {
+  overview: 'workspace.overviewTitle',
+  history: 'workspace.historyTitle',
 };
 
-const OPTIONS: { key: WorkspaceSegment; label: string }[] = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'history', label: 'History' },
+const OPTION_KEYS: { key: WorkspaceSegment; labelKey: string }[] = [
+  { key: 'overview', labelKey: 'workspace.overviewTab' },
+  { key: 'history', labelKey: 'workspace.historyTab' },
 ];
 
 /** Back if there is history (normal case); otherwise fall back to Home (deep link / refresh). */
@@ -39,6 +41,8 @@ export function WorkspaceHeader({
   segment: WorkspaceSegment;
 }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
+  const options = OPTION_KEYS.map((o) => ({ key: o.key, label: t(o.labelKey) }));
 
   function onChange(next: WorkspaceSegment) {
     // Replace (not push) so Back always returns to Home, not through the segments.
@@ -59,7 +63,7 @@ export function WorkspaceHeader({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, flex: 1 }}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Back to Home"
+            accessibilityLabel={t('workspace.backHome')}
             hitSlop={8}
             onPress={goBackOrHome}
             style={({ pressed }) => ({
@@ -84,13 +88,13 @@ export function WorkspaceHeader({
               flexShrink: 1,
             }}
           >
-            {TITLES[segment]}
+            {t(TITLE_KEYS[segment])}
           </Text>
         </View>
       </View>
 
       {SHOW_SEGMENTS ? (
-        <SegmentedControl options={OPTIONS} value={segment} onChange={onChange} />
+        <SegmentedControl options={options} value={segment} onChange={onChange} />
       ) : null}
     </View>
   );

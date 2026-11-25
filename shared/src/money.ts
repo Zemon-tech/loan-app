@@ -126,3 +126,24 @@ export function wholeInstallmentsIn(amountPaise: Paise, emiPaise: Paise): number
   if (!isValidPaise(amountPaise) || !isValidPaise(emiPaise) || emiPaise <= 0 || amountPaise < 0) return null;
   return amountPaise % emiPaise === 0 ? amountPaise / emiPaise : null;
 }
+
+/**
+ * "Tut": the instalments that have fallen due so far minus everything paid, never below zero
+ * (paid ahead shows 0). Charges (late fees etc.) are NOT part of it; they sit in the ledger and in
+ * the outstanding balance. Invalid input gives 0 rather than throwing inside a screen.
+ *
+ *   tutPaise(40000, 20000) -> 20000   (Rs 400 due, Rs 200 paid -> Rs 200 behind)
+ */
+export function tutPaise(installmentsDuePaise: Paise, totalPaidPaise: Paise): Paise {
+  if (!isValidPaise(installmentsDuePaise) || !isValidPaise(totalPaidPaise)) return 0;
+  return Math.max(0, installmentsDuePaise - totalPaidPaise);
+}
+
+/**
+ * How many instalments an amount is, rounded to a whole number (the API rounds the same way).
+ * Null when the instalment amount is not positive.
+ */
+export function installmentsBehind(amountPaise: Paise, emiPaise: Paise): number | null {
+  if (!isValidPaise(amountPaise) || !isValidPaise(emiPaise) || emiPaise <= 0 || amountPaise < 0) return null;
+  return Math.round(amountPaise / emiPaise);
+}

@@ -239,6 +239,13 @@ export type StatusColorRoleKey = keyof typeof StatusColorRole;
 export type AppPalette = Record<AppColorRole, string>;
 
 /** The full token set for one scheme (what components consume via useAppTheme). */
+/** Line heights per role. Hindi (Devanagari) needs more room above and below the line. */
+export type GoldenLineHeight = { body: number; lead: number; heading: number; display: number };
+
+export const AppLineHeightHindi: GoldenLineHeight = { body: 26, lead: 30, heading: 38, display: 48 };
+
+export type AppGoldenTokens = Omit<typeof AppGolden, 'lineHeight'> & { lineHeight: GoldenLineHeight };
+
 export type AppTheme = {
   scheme: AppColorScheme;
   colors: AppPalette;
@@ -247,12 +254,16 @@ export type AppTheme = {
   typography: typeof AppTypography;
   touchTarget: typeof AppTouchTarget;
   motion: typeof AppMotion;
-  golden: typeof AppGolden;
+  golden: AppGoldenTokens;
+  /** UI language the tokens were built for. */
+  language: 'en' | 'hi';
+  /** Letter spacing for a label: 0 in Hindi (spacing breaks Devanagari joined letters). */
+  tracking: (value: number) => number;
   /** Screen background gradient, or null for a flat background. */
   gradient: { colors: readonly [string, string, ...string[]]; locations: readonly [number, number, ...number[]] } | null;
 };
 
-export function getAppTheme(scheme: AppColorScheme): AppTheme {
+export function getAppTheme(scheme: AppColorScheme, language: 'en' | 'hi' = 'en'): AppTheme {
   return {
     scheme,
     colors: AppColors[scheme],
@@ -261,7 +272,9 @@ export function getAppTheme(scheme: AppColorScheme): AppTheme {
     typography: AppTypography,
     touchTarget: AppTouchTarget,
     motion: AppMotion,
-    golden: AppGolden,
+    golden: language === 'hi' ? { ...AppGolden, lineHeight: AppLineHeightHindi } : AppGolden,
+    language,
+    tracking: (value: number) => (language === 'hi' ? 0 : value),
     gradient: AppGradients[scheme]
       ? { colors: AppGradients[scheme].screen, locations: AppGradients[scheme].screenLocations }
       : null,

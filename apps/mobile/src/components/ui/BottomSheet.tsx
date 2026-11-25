@@ -4,6 +4,7 @@
  */
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -34,6 +35,7 @@ export interface BottomSheetProps {
 
 export function BottomSheet({ visible, onClose, title, hideTitle, children }: BottomSheetProps) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
   const [modalRendered, setModalRendered] = useState(visible);
@@ -92,7 +94,7 @@ export function BottomSheet({ visible, onClose, title, hideTitle, children }: Bo
         <Animated.View style={[StyleSheet.absoluteFill, scrimStyle]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Close ${title}`}
+            accessibilityLabel={`${t('common.close')}: ${title}`}
             onPress={onClose}
             style={styles.scrimPressable}
           />
@@ -151,13 +153,14 @@ export function ConfirmSheet({
   message,
   icon,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel,
   confirmVariant = 'primary',
   loading,
   onConfirm,
   onCancel,
 }: ConfirmSheetProps) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
 
   return (
     <BottomSheet visible={visible} onClose={onCancel} title={title} hideTitle>
@@ -194,7 +197,7 @@ export function ConfirmSheet({
       </View>
       <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
         <Button label={confirmLabel} variant={confirmVariant} onPress={onConfirm} loading={loading} />
-        <Button label={cancelLabel} variant="secondary" onPress={onCancel} disabled={loading} />
+        <Button label={cancelLabel ?? t('common.cancel')} variant="secondary" onPress={onCancel} disabled={loading} />
       </View>
     </BottomSheet>
   );

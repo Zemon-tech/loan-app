@@ -10,6 +10,8 @@ import {
   totalPayablePaise,
   interestChargedPaise,
   wholeInstallmentsIn,
+  tutPaise,
+  installmentsBehind,
 } from './money.js';
 
 describe('formatINR (PRD 18.1 expected values)', () => {
@@ -118,4 +120,32 @@ describe('wholeInstallmentsIn', () => {
       expect(wholeInstallmentsIn(amount, emi)).toBeNull();
     },
   );
+});
+
+describe('tutPaise', () => {
+  it('is instalments due minus total paid', () => {
+    expect(tutPaise(40000, 20000)).toBe(20000);
+    expect(tutPaise(570000, 300000)).toBe(270000);
+  });
+  it('is 0 when nothing is behind or the borrower paid ahead', () => {
+    expect(tutPaise(40000, 40000)).toBe(0);
+    expect(tutPaise(40000, 90000)).toBe(0);
+    expect(tutPaise(0, 0)).toBe(0);
+  });
+  it('is 0 (not a crash) for invalid input', () => {
+    expect(tutPaise(40000.5, 100)).toBe(0);
+    expect(tutPaise(Number.NaN, 100)).toBe(0);
+  });
+});
+
+describe('installmentsBehind', () => {
+  it('rounds to whole instalments', () => {
+    expect(installmentsBehind(20000, 20000)).toBe(1);
+    expect(installmentsBehind(270000, 15000)).toBe(18);
+    expect(installmentsBehind(0, 15000)).toBe(0);
+    expect(installmentsBehind(22000, 20000)).toBe(1);
+  });
+  it.each([[20000, 0], [20000, -1], [-5, 100], [1.5, 100]])('returns null for amount=%j emi=%j', (a, e) => {
+    expect(installmentsBehind(a, e)).toBeNull();
+  });
 });

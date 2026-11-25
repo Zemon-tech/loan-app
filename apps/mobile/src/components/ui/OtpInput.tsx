@@ -5,6 +5,7 @@
  */
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -37,6 +38,7 @@ export function OtpInput({
   onComplete,
 }: OtpInputProps) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
   const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
@@ -145,7 +147,7 @@ export function OtpInput({
         autoComplete="sms-otp"
         caretHidden
         selectionColor="transparent"
-        accessibilityLabel={`One-time code, ${length} digits`}
+        accessibilityLabel={t('otp.codeA11y', { count: length })}
         style={[StyleSheet.absoluteFill, { opacity: 0.02, color: 'transparent' }]}
       />
     </Pressable>

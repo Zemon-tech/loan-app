@@ -55,7 +55,7 @@ export function Pill({
           color: theme.colors[color],
           fontSize: theme.typography.size.caption - 1,
           fontWeight: theme.typography.weight.semibold,
-          letterSpacing: uppercase ? 0.6 : 0.1,
+          letterSpacing: theme.tracking(uppercase ? 0.6 : 0.1),
           textTransform: uppercase ? 'uppercase' : 'none',
           flexShrink: 1,
         }}

@@ -3,8 +3,9 @@
  * Not a social profile: no photo upload, no edit, no stats.
  */
 import Constants from 'expo-constants';
-import { Redirect, router } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Image, Text, View } from 'react-native';
 
 import {
@@ -22,6 +23,8 @@ import { LogoutSheet } from '@/features/auth/components/LogoutSheet';
 import { useSession } from '@/features/auth/session';
 import { usePhotoData, useProfileData } from '@/features/api/dataSource';
 import { useSecureScreen } from '@/features/security/useSecureScreen';
+import { LanguageSheet } from '@/features/settings/components/LanguageSheet';
+import { LANGUAGE_LABEL, usePreferences } from '@/features/settings/preferences';
 import { useAppTheme } from '@/hooks/use-theme';
 
 // Backed by the live /api/v1/me and /api/v1/me/photo endpoints.
@@ -30,6 +33,8 @@ const SHOW_PROFILE = true;
 export default function ProfileScreen() {
   useSecureScreen();
   const theme = useAppTheme();
+  const { t } = useTranslation();
+  const { language } = usePreferences();
   const { mobile } = useSession();
   const profileQuery = useProfileData();
   const profile = profileQuery.status === 'success' ? profileQuery.data : null;
@@ -37,18 +42,19 @@ export default function ProfileScreen() {
   const photoUri = photoQuery.status === 'success' ? photoQuery.data : null;
 
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const version = Constants.expoConfig?.version ?? '1.0.0';
 
   if (!SHOW_PROFILE) return <Redirect href="/loans" />;
 
-  const displayName = profile?.name || 'Borrower';
+  const displayName = profile?.name || t('account.borrower');
   const initials = profile?.initials || (profile?.name ? profile.name.slice(0, 2).toUpperCase() : 'B');
   const rawPhone = profile?.phone || mobile || null;
   const phoneDisplay = rawPhone ? formatMobile(rawPhone) : null;
 
   return (
     <ScreenContainer tone="canvas" bottomInset={false}>
-      <PageTitle title="Profile" />
+      <PageTitle title={t('account.title')} />
 
       {/* Identity */}
       <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md }}>
@@ -56,7 +62,7 @@ export default function ProfileScreen() {
           {photoUri ? (
             <Image
               source={{ uri: photoUri }}
-              accessibilityLabel={`Photo of ${displayName}`}
+              accessibilityLabel={t('account.photoOf', { name: displayName })}
               style={{
                 width: 56,
                 height: 56,
@@ -121,30 +127,30 @@ export default function ProfileScreen() {
             >
               <Icon name="shield-checkmark" size={13} color="secondary" />
               <Text style={{ color: theme.colors.secondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
-                Verified Borrower
+                {t('account.verified')}
               </Text>
             </View>
           </View>
         </View>
       </Card>
 
-      {/* Help & Support */}
+      {/* Preferences: app language */}
       <View style={{ gap: theme.spacing.sm }}>
-        <SectionLabel>Help & assistance</SectionLabel>
+        <SectionLabel>{t('account.preferences')}</SectionLabel>
         <SettingsGroup>
           <SettingsRow
-            icon="headset-outline"
-            title="Help & Support"
-            subtitle="Customer care, contact numbers & FAQs"
-            onPress={() => router.push('/account/help')}
+            icon="language-outline"
+            title={t('account.language')}
+            subtitle={t('account.languageHint')}
+            value={LANGUAGE_LABEL[language]}
+            onPress={() => setLanguageOpen(true)}
           />
         </SettingsGroup>
       </View>
-
       {/* Log out */}
       <PressableScale
         accessibilityRole="button"
-        accessibilityLabel="Log out of ALANG CREDITS"
+        accessibilityLabel={t('account.logout')}
         onPress={() => setLogoutOpen(true)}
         haptic
         style={{
@@ -171,7 +177,7 @@ export default function ProfileScreen() {
               includeFontPadding: false,
             }}
           >
-            Log out of ALANG CREDITS
+            {t('account.logout')}
           </Text>
         </View>
       </PressableScale>
@@ -180,15 +186,16 @@ export default function ProfileScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Icon name="lock-closed-outline" size={14} color="textSecondary" />
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1, fontWeight: theme.typography.weight.semibold }}>
-            Encrypted session
+            {t('account.encrypted')}
           </Text>
         </View>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1 }}>
-          ALANG CREDITS App v{version}
+          {t('account.appVersion', { version })}
         </Text>
       </View>
 
       <LogoutSheet visible={logoutOpen} onClose={() => setLogoutOpen(false)} />
+      <LanguageSheet visible={languageOpen} onClose={() => setLanguageOpen(false)} />
     </ScreenContainer>
   );
 }

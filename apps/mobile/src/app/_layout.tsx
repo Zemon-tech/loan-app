@@ -7,6 +7,7 @@ import { Image, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppColors } from '@/constants/theme';
+import '@/i18n'; // initialise translations before any screen renders
 import { queryClient, setupQueryManagers } from '@/features/api/queryClient';
 import { mockRequestedInRelease } from '@/features/api/config';
 import { SessionProvider, useSession } from '@/features/auth/session';

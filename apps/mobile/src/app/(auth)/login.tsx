@@ -1,5 +1,5 @@
 /**
- * S2: Login (mobile number) — PRD 8.2.
+ * S2: Login (mobile number) â€” PRD 8.2.
  * One field, one button. No sign-up, no promotions, no payment.
  *
  * Layout follows the golden ratio (AppGolden): brand zone 38.2% / form zone 61.8% of the
@@ -7,27 +7,31 @@
  */
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark, Button, Icon, ScreenContainer } from '@/components/ui';
-import { COMPANY_NAME, COMPANY_PARENT_TAG } from '@/constants/brand';
+import { COMPANY_NAME } from '@/constants/brand';
 import { apiMode } from '@/features/api/config';
 import * as endpoints from '@/features/api/endpoints';
 import {
   formatMobileInput,
-  mobileCheckMessage,
+  mobileCheckKey,
   normalizeMobile,
-  otpRequestErrorMessage,
+  otpRequestErrorKey,
   validateMobile,
 } from '@/features/auth/format';
 import { useSession } from '@/features/auth/session';
+import { LanguageToggle } from '@/features/settings/components/LanguageToggle';
 import { useAppTheme } from '@/hooks/use-theme';
 import { logger } from '@/lib/logger';
 
-const GENERIC_ERROR = 'Something went wrong. Please try again.';
+/** Height reserved for the language switch above the golden-ratio zones. */
+const TOGGLE_ROW_HEIGHT = 44;
 
 export default function LoginScreen() {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const { golden } = theme;
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -41,12 +45,13 @@ export default function LoginScreen() {
 
   const check = validateMobile(digits);
   // Wrong first digit shows at once; "too short" / "empty" wait for blur or Continue.
-  const checkText = check === 'BAD_START' || touched ? mobileCheckMessage(check) : null;
+  const checkKey = check === 'BAD_START' || touched ? mobileCheckKey(check) : null;
+  const checkText = checkKey ? t(checkKey) : null;
   const errorText = serverError ?? checkText;
 
   // Usable height split by the golden ratio (zones grow, never clip, at large font sizes).
   const usable = Math.max(
-    height - insets.top - insets.bottom - theme.spacing.sm - theme.spacing.xl,
+    height - insets.top - insets.bottom - theme.spacing.sm - theme.spacing.xl - TOGGLE_ROW_HEIGHT,
     0,
   );
   const brandMinHeight = Math.round(usable * golden.split.brand);
@@ -75,10 +80,10 @@ export default function LoginScreen() {
         router.push('/otp');
         return;
       }
-      setServerError(otpRequestErrorMessage(res.error.kind));
+      setServerError(t(otpRequestErrorKey(res.error.kind)));
     } catch {
       logger.error('login', 'otp_request_unexpected_error');
-      setServerError(GENERIC_ERROR);
+      setServerError(t('login.err.generic'));
     } finally {
       inFlight.current = false;
       setSubmitting(false);
@@ -89,6 +94,9 @@ export default function LoginScreen() {
 
   return (
     <ScreenContainer tone="canvas" scrollToEndOnKeyboard contentStyle={{ gap: 0 }}>
+      <View style={{ height: TOGGLE_ROW_HEIGHT, alignItems: 'flex-end', justifyContent: 'center' }}>
+        <LanguageToggle />
+      </View>
       <View
         style={{
           minHeight: brandMinHeight,
@@ -119,7 +127,7 @@ export default function LoginScreen() {
               textAlign: 'center',
             }}
           >
-            {COMPANY_PARENT_TAG}
+            {t('login.byGroup')}
           </Text>
         </View>
       </View>
@@ -134,7 +142,7 @@ export default function LoginScreen() {
             textAlign: 'center',
           }}
         >
-          Welcome
+          {t('login.welcome')}
         </Text>
         <View style={{ gap: golden.spacing.f1 }}>
           <Text
@@ -144,7 +152,7 @@ export default function LoginScreen() {
               fontWeight: theme.typography.weight.medium,
             }}
           >
-            Mobile number
+            {t('login.mobileLabel')}
           </Text>
           <View
             style={{
@@ -198,7 +206,7 @@ export default function LoginScreen() {
               keyboardType="number-pad"
               textContentType="telephoneNumber"
               autoComplete="tel"
-              maxLength={24} // room to paste '+91 98765 43210'; normalised to 10 digits
+              // Room to paste '+91 98765 43210' while the number is incomplete. Once all 10 digits are in,\n              // cap at the formatted length ('98765 43210' = 11 chars) so an 11th digit cannot be typed.\n              maxLength={digits.length >= 10 ? 11 : 24}
               placeholder="98765 43210"
               placeholderTextColor={theme.colors.textSecondary}
               returnKeyType="done"
@@ -208,7 +216,7 @@ export default function LoginScreen() {
                 color: theme.colors.textPrimary,
                 paddingVertical: golden.spacing.f2,
               }}
-              accessibilityLabel="Mobile number, 10 digits"
+              accessibilityLabel={t('login.mobileA11y')}
             />
           </View>
           {errorText ? (
@@ -222,12 +230,12 @@ export default function LoginScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: golden.spacing.f1 }}>
               <Icon name="shield-outline" size={golden.type.body} color="primary" />
               <Text style={[bodyText, { flexShrink: 1 }]}>
-                We&apos;ll SMS you a 6-digit code
+                {t('login.smsNote')}
               </Text>
             </View>
           )}
         </View>
-        <Button label="Continue" rightIcon="arrow-forward" onPress={onContinue} disabled={submitting} loading={submitting} />
+        <Button label={t('login.continue')} rightIcon="arrow-forward" onPress={onContinue} disabled={submitting} loading={submitting} />
       </View>
     </ScreenContainer>
   );

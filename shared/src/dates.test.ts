@@ -134,3 +134,16 @@ describe('isoDateTimeToIstDate', () => {
     expect(() => isoDateTimeToIstDate('2026-04-01T25:00:00')).toThrow();
   });
 });
+
+describe('formatDate locale', () => {
+  it('defaults to English short months', () => {
+    expect(formatDate('2026-06-14')).toBe('14 Jun 2026');
+  });
+  it('uses Hindi month names for hi and hi-IN, digits stay 0-9', () => {
+    expect(formatDate('2026-06-14', 'hi')).toBe('14 \u091C\u0942\u0928 2026');
+    expect(formatDate('2026-09-03', 'hi-IN')).toBe('3 \u0938\u093F\u0924 2026');
+  });
+  it('falls back to English for other locales', () => {
+    expect(formatDate('2026-06-14', 'fr')).toBe('14 Jun 2026');
+  });
+});

@@ -4,10 +4,11 @@
  * when data arrives.
  */
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandMark, Card, Skeleton, SkeletonGroup } from '@/components/ui';
+import { Card, Skeleton, SkeletonGroup } from '@/components/ui';
 import { useAppTheme } from '@/hooks/use-theme';
 
 function SkCard({ children, gap }: { children: ReactNode; gap?: number }) {
@@ -25,72 +26,38 @@ function Row({ children, gap = 12 }: { children: ReactNode; gap?: number }) {
 
 /* ------------------------------- Home ------------------------------- */
 
-function LoanCardSkeleton() {
-  const theme = useAppTheme();
-  return (
-    <SkCard>
-      <Row>
-        <View style={{ flex: 1, gap: 8 }}>
-          <Skeleton width={80} height={11} />
-          <Skeleton width={110} height={18} />
-          <Skeleton width={130} height={14} />
-        </View>
-        <Skeleton width={84} height={26} radius={theme.radius.pill} />
-      </Row>
-      <View style={{ gap: 10 }}>
-        <Row>
-          <Skeleton width={80} height={12} />
-          <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            <Skeleton width={120} height={24} />
-          </View>
-        </Row>
-        <Skeleton height={8} radius={4} />
-        <Skeleton width={140} height={11} />
-      </View>
-      <View style={{ padding: theme.spacing.md, borderRadius: theme.radius.lg, backgroundColor: theme.colors.primarySoft }}>
-        <Row>
-          <View style={{ flex: 1, gap: 6 }}>
-            <Skeleton width={60} height={11} />
-            <Skeleton width={90} height={18} />
-          </View>
-          <Skeleton width={36} height={36} radius={18} />
-        </Row>
-      </View>
-    </SkCard>
-  );
-}
-
 export function HomeSkeleton() {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   return (
-    <SkeletonGroup label="Loading your loans" style={{ gap: theme.spacing.lg }}>
-      <Row>
-        <BrandMark size={36} />
-        <View style={{ flex: 1, gap: 8 }}>
-          <Skeleton width={190} height={20} />
-          <Skeleton width={150} height={14} />
-        </View>
-        <Skeleton width={44} height={44} radius={22} />
-      </Row>
-
-      <SkCard>
-        <Skeleton width={170} height={12} />
-        <Skeleton width={210} height={36} radius={8} />
+    <SkeletonGroup label={t('skeleton.loans')} style={{ gap: theme.spacing.lg }}>
+      {/* greeting line, page title, count chips, then the loans table */}
+      <Skeleton width={190} height={20} />
+      <View style={{ gap: theme.golden.spacing.f1 }}>
+        <Skeleton width={150} height={26} />
         <Row gap={8}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={{ flex: 1, gap: 8, padding: theme.spacing.md, borderRadius: theme.radius.lg, backgroundColor: theme.colors.primarySoft }}>
-              <Skeleton width="60%" height={11} />
-              <Skeleton width="80%" height={16} />
-              <Skeleton width="50%" height={11} />
-            </View>
-          ))}
+          <Skeleton width={100} height={40} radius={theme.radius.pill} />
+          <Skeleton width={116} height={40} radius={theme.radius.pill} />
         </Row>
-        <Skeleton width={120} height={11} />
+      </View>
+      <SkCard>
+        {[0, 1, 2].map((i) => (
+          <Row key={i} gap={12}>
+            <View style={{ flex: 1.4, gap: 7 }}>
+              <Skeleton width="70%" height={16} />
+              <Skeleton width="55%" height={12} />
+              <Skeleton width="65%" height={12} />
+            </View>
+            <View style={{ flex: 0.9 }}>
+              <Skeleton width="80%" height={16} />
+            </View>
+            <View style={{ flex: 1.2, gap: 7 }}>
+              <Skeleton width="85%" height={16} />
+              <Skeleton width="60%" height={16} />
+            </View>
+          </Row>
+        ))}
       </SkCard>
-
-      <Skeleton width={110} height={20} />
-      <LoanCardSkeleton />
-      <LoanCardSkeleton />
     </SkeletonGroup>
   );
 }
@@ -99,13 +66,14 @@ export function HomeSkeleton() {
 
 export function OverviewSkeleton() {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
       scrollEnabled={false}
       contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: insets.bottom + theme.spacing.xl }}
     >
-      <SkeletonGroup label="Loading loan details" style={{ gap: theme.spacing.lg }}>
+      <SkeletonGroup label={t('skeleton.loanDetails')} style={{ gap: theme.spacing.lg }}>
         <SkCard>
           <Row>
             <Skeleton width={40} height={40} radius={12} />
@@ -177,8 +145,9 @@ export function OverviewSkeleton() {
 
 export function HistorySkeleton() {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   return (
-    <SkeletonGroup label="Loading transactions" style={{ flex: 1, gap: theme.spacing.md }}>
+    <SkeletonGroup label={t('skeleton.transactions')} style={{ flex: 1, gap: theme.spacing.md }}>
       <View style={{ paddingHorizontal: theme.spacing.lg, gap: theme.spacing.sm }}>
         <Skeleton width={110} height={20} />
         <View style={{ borderRadius: theme.radius.lg, backgroundColor: theme.colors.card, overflow: 'hidden' }}>

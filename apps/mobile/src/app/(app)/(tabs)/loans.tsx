@@ -11,6 +11,7 @@
  */
 import { Redirect, router } from 'expo-router';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshControl, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ReduceMotion } from 'react-native-reanimated';
 
@@ -24,11 +25,12 @@ import { LoansTable } from '@/features/loans/components/LoansTable';
 import type { LoanListItemVM } from '@/features/api/vm';
 import { useAppTheme } from '@/hooks/use-theme';
 
-function greeting(): string {
+/** i18n key for the time-of-day greeting (device clock: only used to pick morning / afternoon / evening). */
+function greetingKey(): string {
   const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (h < 12) return 'home.morning';
+  if (h < 17) return 'home.afternoon';
+  return 'home.evening';
 }
 
 function openLoan(loanId: string) {
@@ -71,9 +73,14 @@ export default function HomeScreen() {
   return <HomeContent loans={query.data} onRefresh={query.refetch} />;
 }
 
+function AppBarTitle() {
+  const { t } = useTranslation();
+  return <PageTitle title={t('home.yourLoans')} />;
+}
+
 /** Header for the error / empty states: same page title as the loaded screen, no logo. */
 function AppBar() {
-  return <PageTitle title="Your loans" />;
+  return <AppBarTitle />;
 }
 
 /** Rounded count badge: icon + number + label, never colour alone (PRD 6.4). */
@@ -96,7 +103,7 @@ function CountChip({
   return (
     <View
       accessible
-      accessibilityLabel={` ${label}`}
+      accessibilityLabel={`${count} ${label}`}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -118,6 +125,8 @@ function CountChip({
 
 function HomeContent({ loans, onRefresh }: { loans: LoanListItemVM[]; onRefresh: () => void }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
+  const greeting = t(greetingKey());
   const profileQuery = useProfileData();
   const profile = profileQuery.status === 'success' ? profileQuery.data : null;
   const [refreshing, setRefreshing] = useState(false);
@@ -132,7 +141,7 @@ function HomeContent({ loans, onRefresh }: { loans: LoanListItemVM[]; onRefresh:
     }
   };
 
-  const firstName = profile?.name ? profile.name.split(/\s+/)[0] : 'Borrower';
+  const firstName = profile?.name ? profile.name.split(/\s+/)[0] : t('home.borrower');
 
   // Only active loans are ever displayed; closed loans are dropped here for mock and live alike.
   const summary = useMemo(() => buildLoansSummary(loans), [loans]);
@@ -153,7 +162,7 @@ function HomeContent({ loans, onRefresh }: { loans: LoanListItemVM[]; onRefresh:
   const homeHeader = (
     <Text
       accessibilityRole="header"
-      accessibilityLabel={`${greeting()}, ${firstName}`}
+      accessibilityLabel={`${greeting}, ${firstName}`}
       numberOfLines={1}
       adjustsFontSizeToFit
       minimumFontScale={0.7}
@@ -163,7 +172,7 @@ function HomeContent({ loans, onRefresh }: { loans: LoanListItemVM[]; onRefresh:
         lineHeight: theme.golden.lineHeight.lead,
       }}
     >
-      {`${greeting()}, `}
+      {`${greeting}, `}
       <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.bold }}>{firstName}</Text>
     </Text>
   );
@@ -185,13 +194,13 @@ function HomeContent({ loans, onRefresh }: { loans: LoanListItemVM[]; onRefresh:
 
       {/* Page title + active / overdue counts */}
       <Animated.View entering={FadeIn.duration(300).reduceMotion(ReduceMotion.System)}>
-        <PageTitle title="Your loans">
+        <PageTitle title={t('home.yourLoans')}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.golden.spacing.f1 }}>
-            <CountChip icon="checkmark-circle" count={activeLoans.length} label="active" tone="success" />
+            <CountChip icon="checkmark-circle" count={activeLoans.length} label={t('home.active')} tone="success" />
             <CountChip
               icon={summary.overdueLoanCount > 0 ? 'warning' : 'checkmark-circle-outline'}
               count={summary.overdueLoanCount}
-              label="overdue"
+              label={t('home.overdue')}
               tone={summary.overdueLoanCount > 0 ? 'danger' : 'muted'}
             />
           </View>

@@ -10,6 +10,7 @@
  */
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, RefreshControl, ScrollView, SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,6 +19,7 @@ import { formatDate, formatINR } from '@app/shared';
 import { Icon, StateScroll, StateView, type IconName } from '@/components/ui';
 import type { AppColorRole } from '@/constants/theme';
 import { useLoanData, useTransactionsData } from '@/features/api/dataSource';
+import i18n from '@/i18n';
 import type { TransactionVM } from '@/features/api/vm';
 import { HistorySkeleton } from '@/features/system/components/Skeletons';
 import { LoadErrorState, NoTransactionsState, SupportSheet } from '@/features/system/components/SystemStates';
@@ -27,10 +29,10 @@ const DASH = '\u2014';
 
 const DIRECTION: Record<
   TransactionVM['direction'],
-  { icon: IconName; fg: AppColorRole; bg: AppColorRole; label: string; sign: string }
+  { icon: IconName; fg: AppColorRole; bg: AppColorRole; labelKey: string; sign: string }
 > = {
-  credit: { icon: 'arrow-down', fg: 'success', bg: 'successSoft', label: 'Credit', sign: '+' },
-  debit: { icon: 'arrow-up', fg: 'danger', bg: 'dangerSoft', label: 'Debit', sign: '\u2212' },
+  credit: { icon: 'arrow-down', fg: 'success', bg: 'successSoft', labelKey: 'history.credit', sign: '+' },
+  debit: { icon: 'arrow-up', fg: 'danger', bg: 'dangerSoft', labelKey: 'history.debit', sign: '\u2212' },
 };
 
 /** Icons for the API's paymentMode / channel values (unknown values get a neutral icon). */
@@ -54,14 +56,14 @@ interface Section {
 }
 
 /** Group consecutive rows by month, keeping the API's newest-first order. */
-function groupByMonth(items: TransactionVM[]): Section[] {
+function groupByMonth(items: TransactionVM[], lang: string, unknownTitle: string): Section[] {
   const sections: Section[] = [];
   for (const item of items) {
     const key = item.date ? item.date.slice(0, 7) : 'unknown';
     let current = sections[sections.length - 1];
     if (!current || current.key !== key) {
       // "14 Jun 2026" -> "Jun 2026"
-      const title = item.date ? formatDate(item.date).split(' ').slice(1).join(' ') : 'Date not available';
+      const title = item.date ? formatDate(item.date, lang).split(' ').slice(1).join(' ') : unknownTitle;
       current = { key, title, data: [] };
       sections.push(current);
     }
@@ -71,6 +73,7 @@ function groupByMonth(items: TransactionVM[]): Section[] {
 }
 
 export default function HistoryScreen() {
+  const { t } = useTranslation();
   const { loanId } = useLocalSearchParams<{ loanId: string }>();
   const loanQuery = useLoanData(loanId ?? '');
   const txnQuery = useTransactionsData(loanId ?? '');
@@ -98,8 +101,8 @@ export default function HistoryScreen() {
       <StateScroll>
         <StateView
           icon="document-text-outline"
-          title="Loan not found"
-          message="We could not find this loan. Go back to Home and try again."
+          title={t('overview.notFoundTitle')}
+          message={t('overview.notFoundMsg')}
         />
       </StateScroll>
     );
@@ -159,14 +162,24 @@ function MetaField({ label, icon, value }: { label: string; icon: IconName; valu
 }
 function TransactionRow({ item, first, last }: { item: TransactionVM; first: boolean; last: boolean }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const g = theme.golden;
   const d = DIRECTION[item.direction] ?? DIRECTION.credit;
-  const date = item.date ? formatDate(item.date) : DASH;
+  const date = item.date ? formatDate(item.date, theme.language) : DASH;
   const amount = `${d.sign}${formatINR(item.amountPaise)}`;
   const mode = item.paymentMode;
   const channel = item.channel;
+  const modeText = mode ? t(`mode.${mode}`, { defaultValue: mode }) : null;
+  const channelText = channel ? t(`channel.${channel}`, { defaultValue: channel }) : null;
+  const dirLabel = t(d.labelKey);
+  // English shows the API text as is. Other languages translate known transaction codes and fall
+  // back to the API text for unknown / "other" rows, so nothing is ever dropped or invented.
+  const description =
+    theme.language !== 'en' && item.type !== 'other' && i18n.exists(`txnType.${item.type}`)
+      ? t(`txnType.${item.type}`)
+      : item.description;
 
-  const a11y = [d.label, amount, item.description, date, mode ? `Payment mode ${mode}` : null, channel ? `Channel ${channel}` : null]
+  const a11y = [dirLabel, amount, description, date, modeText ? t('history.a11yMode', { value: modeText }) : null, channelText ? t('history.a11yChannel', { value: channelText }) : null]
     .filter(Boolean)
     .join(', ');
 
@@ -208,13 +221,13 @@ function TransactionRow({ item, first, last }: { item: TransactionVM; first: boo
           numberOfLines={2}
           style={{ color: theme.colors.textPrimary, fontSize: g.type.body, lineHeight: g.lineHeight.body, fontWeight: theme.typography.weight.semibold }}
         >
-          {item.description || DASH}
+          {description || DASH}
         </Text>
         <Text style={{ color: theme.colors.textSecondary, fontSize: g.type.caption }}>{date}</Text>
         {mode || channel ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: g.spacing.f3, rowGap: g.spacing.f1, marginTop: g.spacing.f1 }}>
-            {mode ? <MetaField label="Payment mode" icon={MODE_ICON[mode] ?? 'ellipsis-horizontal-circle-outline'} value={mode} /> : null}
-            {channel ? <MetaField label="Channel" icon={CHANNEL_ICON[channel] ?? 'ellipsis-horizontal-circle-outline'} value={channel} /> : null}
+            {mode && modeText ? <MetaField label={t('history.paymentMode')} icon={MODE_ICON[mode] ?? 'ellipsis-horizontal-circle-outline'} value={modeText} /> : null}
+            {channel && channelText ? <MetaField label={t('history.channel')} icon={CHANNEL_ICON[channel] ?? 'ellipsis-horizontal-circle-outline'} value={channelText} /> : null}
           </View>
         ) : null}
       </View>
@@ -224,7 +237,7 @@ function TransactionRow({ item, first, last }: { item: TransactionVM; first: boo
           {amount}
         </Text>
         <Text style={{ color: theme.colors[d.fg], fontSize: g.type.caption, fontWeight: theme.typography.weight.semibold }}>
-          {d.label}
+          {dirLabel}
         </Text>
       </View>
     </View>
@@ -252,7 +265,10 @@ function HistoryList({
 }: HistoryListProps) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const sections = useMemo(() => groupByMonth(transactions), [transactions]);
+  const { t } = useTranslation();
+  const lang = theme.language;
+  const dateNA = t('history.dateNA');
+  const sections = useMemo(() => groupByMonth(transactions, lang, dateNA), [transactions, lang, dateNA]);
 
   const keyExtractor = useCallback((t: TransactionVM, index: number) => `${t.rawDate}-${index}`, []);
 
@@ -316,7 +332,7 @@ function HistoryList({
             fontSize: theme.golden.type.caption,
           }}
         >
-          {totalCount} {totalCount === 1 ? 'transaction' : 'transactions'}
+          {t(totalCount === 1 ? 'history.countOne' : 'history.countMany', { count: totalCount })}
         </Text>
       }
       ListFooterComponent={

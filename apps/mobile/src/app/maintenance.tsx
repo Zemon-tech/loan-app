@@ -4,6 +4,7 @@
  */
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Linking, Text, View } from 'react-native';
 
 import { Button, Card, Icon, IconTile, Pill, ScreenContainer } from '@/components/ui';
@@ -13,6 +14,7 @@ import { useAppTheme } from '@/hooks/use-theme';
 
 export default function MaintenanceScreen() {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const [config, setConfig] = useState<BootConfig | null>(null);
   const [retrying, setRetrying] = useState(false);
 
@@ -30,17 +32,17 @@ export default function MaintenanceScreen() {
   return (
     <ScreenContainer tone="canvas">
       <View style={{ alignItems: 'center', gap: theme.spacing.lg, marginTop: theme.spacing.xl }}>
-        <Pill dot="textSecondary" label="System upgrade in progress" color="textSecondary" uppercase />
+        <Pill dot="textSecondary" label={t('maintenance.pill')} color="textSecondary" uppercase />
         <IconTile name="cloud-done-outline" size={96} badge="build" />
         <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
           <Text
             accessibilityRole="header"
             style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.title + 2, fontWeight: theme.typography.weight.bold }}
           >
-            We&apos;ll be back soon
+            {t('maintenance.title')}
           </Text>
           <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 }}>
-            We&apos;re doing some scheduled maintenance on our servers to keep your loan records up to date.
+            {t('maintenance.body')}
           </Text>
         </View>
       </View>
@@ -54,10 +56,10 @@ export default function MaintenanceScreen() {
                 color: theme.colors.textSecondary,
                 fontSize: theme.typography.size.caption,
                 fontWeight: theme.typography.weight.semibold,
-                letterSpacing: 0.6,
+                letterSpacing: theme.tracking(0.6),
               }}
             >
-              ESTIMATED WINDOW
+              {t('maintenance.window')}
             </Text>
             <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.semibold }}>
               {config.maintenance.expectedBackText}
@@ -69,14 +71,14 @@ export default function MaintenanceScreen() {
       <Card tone="card" style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <IconTile name="shield-checkmark-outline" size={44} background="successSoft" color="success" />
         <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 22 }}>
-          Your loan data and records are safe and encrypted.
+          {t('maintenance.safe')}
         </Text>
       </Card>
 
       <View style={{ gap: theme.spacing.sm }}>
-        <Button label="Try again" leftIcon="refresh" onPress={onTryAgain} />
+        <Button label={t('common.tryAgain')} leftIcon="refresh" onPress={onTryAgain} />
         <Button
-          label="Contact customer support"
+          label={t('maintenance.contact')}
           variant="ghost"
           leftIcon="headset-outline"
           onPress={() => Linking.openURL(Links.supportPhone)}
@@ -85,7 +87,7 @@ export default function MaintenanceScreen() {
 
       <View style={{ flex: 1, justifyContent: 'flex-end', flexDirection: 'row', alignItems: 'flex-end', alignSelf: 'center', gap: theme.spacing.sm }}>
         <Icon name="lock-closed-outline" size={14} color="textSecondary" />
-        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>256-bit encrypted</Text>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>{t('maintenance.enc')}</Text>
       </View>
     </ScreenContainer>
   );

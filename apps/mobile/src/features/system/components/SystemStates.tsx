@@ -5,6 +5,7 @@
  * TODO (M-05/M-08): lender name, contacts and masked mobile from GET /v1/config and /v1/me; i18n
  */
 import { Linking, Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BottomSheet, Button, Card, Icon, IconTile, StateView } from '@/components/ui';
 import { Links } from '@/constants/links';
@@ -20,6 +21,7 @@ import { useIsOffline } from '../connectivity';
 /** Persistent, lightweight. Renders nothing while online. */
 export function OfflineBanner() {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const offline = useIsOffline();
   if (!offline) return null;
 
@@ -27,7 +29,7 @@ export function OfflineBanner() {
     <View
       accessible
       accessibilityRole="alert"
-      accessibilityLabel="You're offline. Some information may not be up to date."
+      accessibilityLabel={t('states.offlineA11y')}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -51,10 +53,10 @@ export function OfflineBanner() {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.body, fontWeight: theme.typography.weight.semibold }}>
-          You&apos;re offline
+          {t('states.offlineTitle')}
         </Text>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-          Some information may not be up to date.
+          {t('states.offlineMsg')}
         </Text>
       </View>
     </View>
@@ -65,32 +67,33 @@ export function OfflineBanner() {
 
 export function LoadErrorState({ onRetry, retrying }: { onRetry: () => void; retrying?: boolean }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   return (
     <StateView
       icon="wifi-outline"
       badge="alert-circle"
-      title="Something went wrong"
-      message="We couldn't load your loan information. Please check your internet connection and try again."
-      primary={{ label: 'Try again', icon: 'refresh', onPress: onRetry, loading: retrying }}
-      secondary={{ label: 'Contact support', icon: 'headset-outline', onPress: () => Linking.openURL(Links.supportPhone) }}
+      title={t('states.errorTitle')}
+      message={t('states.errorMsg')}
+      primary={{ label: t('common.tryAgain'), icon: 'refresh', onPress: onRetry, loading: retrying }}
+      secondary={{ label: t('common.contactSupport'), icon: 'headset-outline', onPress: () => Linking.openURL(Links.supportPhone) }}
     >
       <Card tone="card" style={{ alignSelf: 'stretch', borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md }}>
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
           <Icon name="shield-checkmark-outline" size={18} color="textSecondary" />
           <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, lineHeight: 20 }}>
-            Your loan records are safe and have not changed. If this keeps happening, please contact support.
+            {t('states.errorSafe')}
           </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1 }}>Toll-free assistance</Text>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1 }}>{t('states.tollFree')}</Text>
             <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.subtitle, fontWeight: theme.typography.weight.bold }}>
               {PLACEHOLDER_SUPPORT.phoneDisplay}
             </Text>
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Call support"
+            accessibilityLabel={t('states.callSupport')}
             onPress={() => Linking.openURL(Links.supportPhone)}
             style={({ pressed }) => ({
               width: theme.touchTarget.min,
@@ -114,6 +117,7 @@ export function LoadErrorState({ onRetry, retrying }: { onRetry: () => void; ret
 
 export function NoLoansState({ onRefresh, refreshing }: { onRefresh: () => void; refreshing?: boolean }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const { mobile } = useSession();
   const linked = mobile ? maskMobile(mobile) : '+91 98XXXXX002';
 
@@ -123,34 +127,34 @@ export function NoLoansState({ onRefresh, refreshing }: { onRefresh: () => void;
         <StateView
           icon="business-outline"
           badge="checkmark-circle"
-          title="No loan accounts found"
+          title={t('states.noLoansTitle')}
           message={
             <>
-              We couldn&apos;t find any loan accounts linked to{' '}
+              {t('states.noLoansBefore')}{' '}
               <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.semibold }}>{linked}</Text>
-              . If you believe this is incorrect, contact support.
+              {t('states.noLoansEnd')} {t('states.noLoansAfter')}
             </>
           }
-          primary={{ label: 'Contact support', icon: 'headset-outline', onPress: () => Linking.openURL(Links.supportPhone) }}
-          secondary={{ label: 'Refresh', icon: 'sync-outline', onPress: onRefresh }}
+          primary={{ label: t('common.contactSupport'), icon: 'headset-outline', onPress: () => Linking.openURL(Links.supportPhone) }}
+          secondary={{ label: t('common.refresh'), icon: 'sync-outline', onPress: onRefresh }}
         />
         {refreshing ? (
           <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: theme.typography.size.caption }}>
-            Checking again...
+            {t('states.checking')}
           </Text>
         ) : null}
       </Card>
 
       <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.sm }}>
-        <InfoRow icon="phone-portrait-outline" label="Linked mobile" value={linked} />
-        <InfoRow icon="business-outline" label="Lender" value={PLACEHOLDER_LENDER.legalName} />
-        <InfoRow icon="lock-closed-outline" label="Access" value="Read-only" />
+        <InfoRow icon="phone-portrait-outline" label={t('states.linkedMobile')} value={linked} />
+        <InfoRow icon="business-outline" label={t('states.lender')} value={PLACEHOLDER_LENDER.legalName} />
+        <InfoRow icon="lock-closed-outline" label={t('states.access')} value={t('states.readOnly')} />
       </Card>
 
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.xs }}>
         <Icon name="information-circle-outline" size={18} color="textSecondary" />
         <Text style={{ flex: 1, color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, lineHeight: 20 }}>
-          This app displays loan records only. Loan applications and approvals are handled by your lender.
+          {t('states.noLoansFoot')}
         </Text>
       </View>
     </View>
@@ -183,21 +187,22 @@ function InfoRow({ icon, label, value }: { icon: 'phone-portrait-outline' | 'bus
 
 export function NoTransactionsState({ onHelp }: { onHelp: () => void }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   return (
     <Card tone="card" style={{ borderRadius: theme.radius.lg, padding: theme.spacing.xl, gap: theme.spacing.lg }}>
       <StateView
         icon="receipt-outline"
         badge="time-outline"
-        title="No transactions yet"
-        message="Your loan activity will appear here."
+        title={t('states.noTxTitle')}
+        message={t('states.noTxMsg')}
       >
         <View style={{ alignSelf: 'stretch', gap: theme.spacing.sm, padding: theme.spacing.md, borderRadius: theme.radius.md, backgroundColor: theme.colors.primarySoft }}>
-          <Tip icon="sync-outline" text="Payments appear here after your lender records them." />
+          <Tip icon="sync-outline" text={t('states.tip1')} />
           <View style={{ height: 1, backgroundColor: theme.colors.border }} />
-          <Tip icon="business-outline" text="Cash paid at a branch shows up once the branch records it." />
+          <Tip icon="business-outline" text={t('states.tip2')} />
         </View>
       </StateView>
-      <Button label="Need help with a recent payment?" variant="secondary" leftIcon="headset-outline" onPress={onHelp} />
+      <Button label={t('states.helpBtn')} variant="secondary" leftIcon="headset-outline" onPress={onHelp} />
     </Card>
   );
 }
@@ -216,16 +221,17 @@ function Tip({ icon, text }: { icon: 'sync-outline' | 'business-outline'; text: 
 
 export function SupportSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Payment questions">
+    <BottomSheet visible={visible} onClose={onClose} title={t('states.supportTitle')}>
       <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24 }}>
-        If you paid recently and do not see it yet, your lender can check the payment for you.
+        {t('states.supportBody')}
       </Text>
       <View style={{ gap: theme.spacing.sm }}>
-        <SupportRow icon="call-outline" label="Call support" value={PLACEHOLDER_SUPPORT.phoneDisplay} onPress={() => Linking.openURL(Links.supportPhone)} />
-        <SupportRow icon="mail-outline" label="Email" value={PLACEHOLDER_SUPPORT.email} onPress={() => Linking.openURL(Links.supportEmail)} />
+        <SupportRow icon="call-outline" label={t('states.callSupport')} value={PLACEHOLDER_SUPPORT.phoneDisplay} onPress={() => Linking.openURL(Links.supportPhone)} />
+        <SupportRow icon="mail-outline" label={t('states.email')} value={PLACEHOLDER_SUPPORT.email} onPress={() => Linking.openURL(Links.supportEmail)} />
       </View>
-      <Button label="Close" variant="secondary" onPress={onClose} />
+      <Button label={t('common.close')} variant="secondary" onPress={onClose} />
     </BottomSheet>
   );
 }

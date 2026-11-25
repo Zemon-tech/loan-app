@@ -5,6 +5,7 @@
  */
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { Button, Card, Icon, IconTile, Pill, ScreenContainer } from '@/components/ui';
@@ -13,6 +14,7 @@ import { useAppTheme } from '@/hooks/use-theme';
 
 export default function SessionExpiredScreen() {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const { isLoggedIn, logout } = useSession();
   const [leaving, setLeaving] = useState(false);
 
@@ -29,7 +31,7 @@ export default function SessionExpiredScreen() {
   return (
     <ScreenContainer tone="canvas" scroll={false} contentStyle={{ justifyContent: 'center' }}>
       <View style={{ alignItems: 'center', gap: theme.spacing.lg }}>
-        <Pill icon="shield-outline" label="Security timeout" color="primary" />
+        <Pill icon="shield-outline" label={t('session.pill')} color="primary" />
 
         <Card tone="card" style={{ alignSelf: 'stretch', alignItems: 'center', borderRadius: theme.radius.xl, padding: theme.spacing.xl, gap: theme.spacing.lg }}>
           <IconTile name="lock-closed" size={72} background="primarySoft" badge="time-outline" badgeColor="textSecondary" />
@@ -39,20 +41,20 @@ export default function SessionExpiredScreen() {
               accessibilityRole="header"
               style={{ color: theme.colors.textPrimary, fontSize: theme.golden.type.heading, fontWeight: theme.typography.weight.bold, textAlign: 'center' }}
             >
-              Your session has expired
+              {t('session.title')}
             </Text>
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.body, lineHeight: 24, textAlign: 'center' }}>
-              For your privacy and security, you were signed out. Please log in again.
+              {t('session.body')}
             </Text>
           </View>
 
-          <Button label="Continue to login" rightIcon="arrow-forward" onPress={continueToLogin} style={{ alignSelf: 'stretch' }} />
+          <Button label={t('session.button')} rightIcon="arrow-forward" onPress={continueToLogin} style={{ alignSelf: 'stretch' }} />
         </Card>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Icon name="lock-closed-outline" size={14} color="textSecondary" />
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption - 1 }}>
-            Your loan information was not changed
+            {t('session.foot')}
           </Text>
         </View>
       </View>

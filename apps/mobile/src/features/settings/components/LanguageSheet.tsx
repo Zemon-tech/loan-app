@@ -1,9 +1,9 @@
 /**
- * LanguageSheet — pick English or Hindi. One tap selects and closes.
- *
- * TODO (Phase 2): wire into i18next; until translations ship, text stays in English.
+ * LanguageSheet - pick English or Hindi. One tap selects, applies the language at once and closes.
+ * Each option is written in its own language, so it can be found whatever language is active.
  */
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { BottomSheet, OptionRow } from '@/components/ui';
 import { useAppTheme } from '@/hooks/use-theme';
@@ -14,10 +14,10 @@ const ORDER: Language[] = ['en', 'hi'];
 
 export function LanguageSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const { language, setLanguage } = usePreferences();
-
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Language">
+    <BottomSheet visible={visible} onClose={onClose} title={t('lang.title')}>
       <View style={{ gap: theme.spacing.sm }} accessibilityRole="radiogroup">
         {ORDER.map((l) => (
           <OptionRow
@@ -32,7 +32,7 @@ export function LanguageSheet({ visible, onClose }: { visible: boolean; onClose:
         ))}
       </View>
       <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, textAlign: 'center' }}>
-        App text switches to your language as translations become available.
+        {t('lang.note')}
       </Text>
     </BottomSheet>
   );

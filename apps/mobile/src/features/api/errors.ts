@@ -39,30 +39,32 @@ export class AdapterError extends Error {
   }
 }
 
-/** Map an ApiError to a calm, non-technical sentence. */
-export function friendlyMessage(error: ApiError): string {
+/**
+ * i18n key of a calm, non-technical sentence for an ApiError (the screen shows `t(key)`). Keys,
+ * not text, so this module stays pure and the wording follows the user's language.
+ */
+export function friendlyMessageKey(error: ApiError): string {
   switch (error.kind) {
     case 'NETWORK':
-      return 'You appear to be offline. Check your connection and try again.';
+      return 'errors.network';
     case 'TIMEOUT':
-      return 'That took too long. Please try again.';
+      return 'errors.timeout';
     case 'SERVER':
-      return 'Something went wrong on our side. Please try again in a moment.';
+      return 'errors.server';
     case 'RATE_LIMITED':
-      return 'Too many attempts. Please wait a little while and try again.';
+      return 'errors.rateLimited';
     case 'NOT_FOUND':
-      return "We couldn't find this loan. Pull to refresh your list.";
+      return 'errors.notFound';
     case 'BAD_REQUEST':
-      return "That didn't look right. Please check your details and try again.";
+      return 'errors.badRequest';
     case 'UNAUTHORIZED':
-      return 'Your session has ended. Please sign in again.';
+      return 'errors.unauthorized';
     case 'FORBIDDEN_HTTP':
     case 'ADAPTER':
     default:
-      return 'Something went wrong. Please try again in a moment.';
+      return 'errors.generic';
   }
 }
-
 /** True when this error should surface as the `session_expired` query state. */
 export function isSessionExpired(error: unknown): boolean {
   return (

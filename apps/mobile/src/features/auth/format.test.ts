@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  mobileCheckMessage,
+  mobileCheckKey,
   extractOtp,
   normalizeMobile,
-  otpRequestErrorMessage,
+  otpRequestErrorKey,
   validateMobile,
 } from './format';
 
@@ -51,18 +51,20 @@ describe('validateMobile', () => {
 
 describe('messages', () => {
   it('has plain messages for each failed check', () => {
-    expect(mobileCheckMessage('OK')).toBeNull();
-    expect(mobileCheckMessage('EMPTY')).toBe('Please enter your 10-digit mobile number.');
-    expect(mobileCheckMessage('TOO_SHORT')).toBe('Please enter your 10-digit mobile number.');
-    expect(mobileCheckMessage('BAD_START')).toBe('Mobile numbers start with 6, 7, 8 or 9.');
+    expect(mobileCheckKey('OK')).toBeNull();
+    expect(mobileCheckKey('EMPTY')).toBe('login.err.enter10');
+    expect(mobileCheckKey('TOO_SHORT')).toBe('login.err.enter10');
+    expect(mobileCheckKey('BAD_START')).toBe('login.err.startDigit');
   });
-  it('maps request errors without technical text', () => {
-    expect(otpRequestErrorMessage('NETWORK')).toMatch(/No internet/);
-    expect(otpRequestErrorMessage('RATE_LIMITED')).toMatch(/Too many attempts/);
-    expect(otpRequestErrorMessage('SERVER')).toBe('Something went wrong. Please try again.');
-    expect(otpRequestErrorMessage('ADAPTER')).toBe('Something went wrong. Please try again.');
+
+  it('maps request failures to non-revealing keys', () => {
+    expect(otpRequestErrorKey('NETWORK')).toBe('login.err.network');
+    expect(otpRequestErrorKey('RATE_LIMITED')).toBe('login.err.rateLimited');
+    expect(otpRequestErrorKey('SERVER')).toBe('login.err.generic');
+    expect(otpRequestErrorKey('ADAPTER')).toBe('login.err.generic');
   });
 });
+
 describe('extractOtp', () => {
   it.each([
     ['123456', '123456'],

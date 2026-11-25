@@ -16,6 +16,7 @@
  */
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import {
@@ -30,7 +31,7 @@ import {
 } from '@/components/ui';
 import { apiMode } from '@/features/api/config';
 import * as endpoints from '@/features/api/endpoints';
-import { friendlyMessage } from '@/features/api/errors';
+import { friendlyMessageKey } from '@/features/api/errors';
 import { useSecureScreen } from '@/features/security/useSecureScreen';
 import { extractOtp, maskMobile } from '@/features/auth/format';
 import { useSession } from '@/features/auth/session';
@@ -43,7 +44,6 @@ const MAX_ATTEMPTS = 3;
 const LOCK_SECONDS = 300;
 
 const LIVE = apiMode() === 'live';
-const ONE_MESSAGE = "That code didn't work. Check it and try again, or request a new one.";
 
 type Mode = 'entry' | 'invalid' | 'expired' | 'locked';
 type LiveStep = 'otp' | 'dob';
@@ -69,15 +69,16 @@ function ResendRow({
   onResend: () => void;
 }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const size = theme.golden.type.body;
   return (
     <View style={{ alignItems: 'center', gap: theme.golden.spacing.f1 }}>
-      <Text style={{ color: theme.colors.textSecondary, fontSize: size }}>Didn&apos;t receive code?</Text>
+      <Text style={{ color: theme.colors.textSecondary, fontSize: size }}>{t('otp.didntReceive')}</Text>
       <Pressable
         onPress={onResend}
         disabled={!canResend}
         accessibilityRole="button"
-        accessibilityLabel={canResend ? 'Resend code' : `Resend code in ${secondsLeft} seconds`}
+        accessibilityLabel={canResend ? t('otp.resendA11y') : t('otp.resendInA11y', { seconds: secondsLeft })}
         accessibilityState={{ disabled: !canResend }}
         style={{ minHeight: theme.touchTarget.min, justifyContent: 'center', paddingHorizontal: theme.spacing.md }}
       >
@@ -88,7 +89,7 @@ function ResendRow({
               fontWeight: theme.typography.weight.bold,
             }}
           >
-            Resend
+            {t('otp.resend')}
           </Text>
           {canResend ? null : ` - ${formatCountdown(secondsLeft)}`}
         </Text>
@@ -104,20 +105,21 @@ function ResendRow({
  */
 function PasteCodeButton({ onCode, disabled }: { onCode: (code: string) => void; disabled?: boolean }) {
   const theme = useAppTheme();
-  const [hint, setHint] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const [hintKey, setHintKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function onPress() {
     if (busy || disabled) return;
     setBusy(true);
-    setHint(null);
+    setHintKey(null);
     try {
       const code = extractOtp(await Clipboard.getStringAsync());
       if (code) onCode(code);
-      else setHint('No code found. Copy the code from the message first.');
+      else setHintKey('otp.pasteNone');
     } catch {
       logger.warn('otp', 'paste_failed');
-      setHint('Could not read the clipboard. Please type the code.');
+      setHintKey('otp.pasteFail');
     } finally {
       setBusy(false);
     }
@@ -125,10 +127,10 @@ function PasteCodeButton({ onCode, disabled }: { onCode: (code: string) => void;
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <Button label="Paste code" variant="ghost" leftIcon="clipboard-outline" fullWidth={false} onPress={() => void onPress()} disabled={disabled || busy} />
-      {hint ? (
+      <Button label={t('otp.pasteCode')} variant="ghost" leftIcon="clipboard-outline" fullWidth={false} onPress={() => void onPress()} disabled={disabled || busy} />
+      {hintKey ? (
         <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.textSecondary, fontSize: theme.golden.type.small + 1, textAlign: 'center' }}>
-          {hint}
+          {t(hintKey)}
         </Text>
       ) : null}
     </View>
@@ -138,8 +140,8 @@ function PasteCodeButton({ onCode, disabled }: { onCode: (code: string) => void;
 function OtpHeading({
   mobile,
   onChangeNumber,
-  title = 'Verification code',
-  subtitle = 'Enter the 6-digit code we sent to',
+  title,
+  subtitle,
   showNumber = true,
 }: {
   mobile: string | null;
@@ -149,6 +151,7 @@ function OtpHeading({
   showNumber?: boolean;
 }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const g = theme.golden;
   return (
     <View style={{ alignItems: 'center', gap: g.spacing.f1 }}>
@@ -161,14 +164,16 @@ function OtpHeading({
           textAlign: 'center',
         }}
       >
-        {title}
+        {title ?? t('otp.title')}
       </Text>
-      <Text style={{ color: theme.colors.textSecondary, fontSize: g.type.body, textAlign: 'center' }}>{subtitle}</Text>
+      <Text style={{ color: theme.colors.textSecondary, fontSize: g.type.body, lineHeight: g.lineHeight.body, textAlign: 'center' }}>
+        {subtitle ?? t('otp.subtitle')}
+      </Text>
       {showNumber ? (
         <Pressable
           onPress={onChangeNumber}
           accessibilityRole="button"
-          accessibilityLabel={`${maskMobile(mobile)}. Change number`}
+          accessibilityLabel={t('otp.changeNumberA11y', { mobile: maskMobile(mobile) })}
           hitSlop={8}
           style={{ flexDirection: 'row', alignItems: 'center', gap: g.spacing.f1, minHeight: theme.touchTarget.min }}
         >
@@ -195,6 +200,7 @@ export default function OtpScreen() {
 
 function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: string | null }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const { completeLogin, startLogin } = useSession();
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<LiveStep>('otp');
@@ -225,9 +231,9 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
     setVerifying(false);
 
     if (!res.ok) {
-      if (res.error.kind === 'UNAUTHORIZED') setMessage(ONE_MESSAGE);
-      else if (res.error.kind === 'BAD_REQUEST') setMessage(ONE_MESSAGE);
-      else setMessage(friendlyMessage(res.error));
+      if (res.error.kind === 'UNAUTHORIZED') setMessage(t('otp.wrongCode'));
+      else if (res.error.kind === 'BAD_REQUEST') setMessage(t('otp.wrongCode'));
+      else setMessage(t(friendlyMessageKey(res.error)));
       return;
     }
 
@@ -259,24 +265,24 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
     const month = mm.padStart(2, '0');
     const year = yyyy;
     if (year.length !== 4 || !month || !day) {
-      setDobError('Enter your date of birth as DD / MM / YYYY.');
+      setDobError(t('otp.dobFormat'));
       return;
     }
     const iso = `${year}-${month}-${day}`;
     try {
       parseIsoDate(iso);
     } catch {
-      setDobError('That date of birth is not valid.');
+      setDobError(t('otp.dobInvalid'));
       return;
     }
     const y = Number(year);
     const currentYear = Number(todayIST().slice(0, 4));
     if (y < 1900 || y > currentYear) {
-      setDobError('That date of birth is not valid.');
+      setDobError(t('otp.dobInvalid'));
       return;
     }
     if (iso > todayIST()) {
-      setDobError('Date of birth cannot be in the future.');
+      setDobError(t('otp.dobFuture'));
       return;
     }
     void submitVerify(iso);
@@ -289,7 +295,7 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
     setSecondsLeft(RESEND_SECONDS);
     const res = await endpoints.otpRequest(mobileDigits);
     if (!res.ok && res.error.kind === 'RATE_LIMITED') {
-      setMessage(friendlyMessage(res.error));
+      setMessage(t(friendlyMessageKey(res.error)));
     }
   }
 
@@ -306,8 +312,8 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
           <OtpHeading
             mobile={mobile}
             onChangeNumber={() => setStep('otp')}
-            title="Confirm your date of birth"
-            subtitle="For your security, please confirm your date of birth to continue."
+            title={t('otp.dobTitle')}
+            subtitle={t('otp.dobSubtitle')}
             showNumber={false}
           />
           <Text
@@ -315,7 +321,7 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
             onPress={() => setStep('otp')}
             style={{ color: theme.colors.interactive, fontSize: theme.golden.type.body, fontWeight: theme.typography.weight.medium, textAlign: 'center', paddingVertical: theme.spacing.xs }}
           >
-            Back to code
+            {t('otp.backToCode')}
           </Text>
         </>
       )}
@@ -336,7 +342,7 @@ function LiveOtp({ mobileDigits, mobile }: { mobileDigits: string; mobile: strin
 
           <PasteCodeButton onCode={onOtpChange} disabled={verifying} />
 
-          <Button label="Verify" onPress={() => void submitVerify()} disabled={!canVerify} loading={verifying} />
+          <Button label={t('otp.verify')} onPress={() => void submitVerify()} disabled={!canVerify} loading={verifying} />
 
           <ResendRow canResend={canResend} secondsLeft={secondsLeft} onResend={onResend} />
         </View>
@@ -380,7 +386,8 @@ function DobStep({
   onSubmit: () => void;
 }) {
   const theme = useAppTheme();
-  const digits = (t: string, max: number) => t.replace(/\D/g, '').slice(0, max);
+  const { t } = useTranslation();
+  const digits = (v: string, max: number) => v.replace(/\D/g, '').slice(0, max);
 
   const fieldStyle = {
     minHeight: 56,
@@ -398,21 +405,21 @@ function DobStep({
 
   return (
     <View style={{ gap: theme.spacing.md }}>
-      <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold, letterSpacing: 0.6 }}>
-        DATE OF BIRTH
+      <Text style={{ color: theme.colors.textSecondary, fontSize: theme.typography.size.caption, fontWeight: theme.typography.weight.semibold, letterSpacing: theme.tracking(0.6) }}>
+        {t('otp.dobLabel')}
       </Text>
       <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
         <View style={{ flex: 1, gap: theme.spacing.xs }}>
-          <Text style={label}>Day</Text>
-          <TextInput value={dd} onChangeText={(t) => setDd(digits(t, 2))} keyboardType="number-pad" maxLength={2} placeholder="DD" placeholderTextColor={theme.colors.textSecondary} style={fieldStyle} accessibilityLabel="Day of birth" />
+          <Text style={label}>{t('otp.day')}</Text>
+          <TextInput value={dd} onChangeText={(v) => setDd(digits(v, 2))} keyboardType="number-pad" maxLength={2} placeholder="DD" placeholderTextColor={theme.colors.textSecondary} style={fieldStyle} accessibilityLabel={t('otp.dayA11y')} />
         </View>
         <View style={{ flex: 1, gap: theme.spacing.xs }}>
-          <Text style={label}>Month</Text>
-          <TextInput value={mm} onChangeText={(t) => setMm(digits(t, 2))} keyboardType="number-pad" maxLength={2} placeholder="MM" placeholderTextColor={theme.colors.textSecondary} style={fieldStyle} accessibilityLabel="Month of birth" />
+          <Text style={label}>{t('otp.month')}</Text>
+          <TextInput value={mm} onChangeText={(v) => setMm(digits(v, 2))} keyboardType="number-pad" maxLength={2} placeholder="MM" placeholderTextColor={theme.colors.textSecondary} style={fieldStyle} accessibilityLabel={t('otp.monthA11y')} />
         </View>
         <View style={{ flex: 1.3, gap: theme.spacing.xs }}>
-          <Text style={label}>Year</Text>
-          <TextInput value={yyyy} onChangeText={(t) => setYyyy(digits(t, 4))} keyboardType="number-pad" maxLength={4} placeholder="YYYY" placeholderTextColor={theme.colors.textSecondary} style={fieldStyle} accessibilityLabel="Year of birth" />
+          <Text style={label}>{t('otp.year')}</Text>
+          <TextInput value={yyyy} onChangeText={(v) => setYyyy(digits(v, 4))} keyboardType="number-pad" maxLength={4} placeholder="YYYY" placeholderTextColor={theme.colors.textSecondary} style={fieldStyle} accessibilityLabel={t('otp.yearA11y')} />
         </View>
       </View>
       {error ? (
@@ -421,7 +428,7 @@ function DobStep({
           <Text style={{ flex: 1, color: theme.colors.danger, fontSize: theme.typography.size.caption + 1 }}>{error}</Text>
         </View>
       ) : null}
-      <Button label="Confirm & Proceed" rightIcon="arrow-forward" onPress={onSubmit} disabled={submitting} loading={submitting} />
+      <Button label={t('otp.confirm')} rightIcon="arrow-forward" onPress={onSubmit} disabled={submitting} loading={submitting} />
     </View>
   );
 }
@@ -430,6 +437,7 @@ function DobStep({
 
 function MockOtp({ mobile }: { mobile: string | null }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const { completeLogin } = useSession();
   const [otp, setOtp] = useState('');
   const [mode, setMode] = useState<Mode>('entry');
@@ -594,7 +602,7 @@ function MockOtp({ mobile }: { mobile: string | null }) {
           {mode === 'expired' ? (
             <Button label="Send a new code" leftIcon="refresh" onPress={onResend} />
           ) : (
-            <Button label="Verify" onPress={() => onVerify()} disabled={!canVerify} loading={verifying} />
+            <Button label={t('otp.verify')} onPress={() => onVerify()} disabled={!canVerify} loading={verifying} />
           )}
 
           <ResendRow canResend={canResend} secondsLeft={secondsLeft} onResend={onResend} />

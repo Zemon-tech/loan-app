@@ -33,35 +33,37 @@ export function validateMobile(digits: string): MobileCheck {
   return INDIAN_MOBILE.test(digits) ? 'OK' : 'BAD_START';
 }
 
-/** Plain-language message for a failed check (null when OK). */
-export function mobileCheckMessage(check: MobileCheck): string | null {
+/**
+ * i18n key of the plain-language message for a failed check (null when OK). Returns a KEY, not
+ * text, so this stays pure and the screen translates it with `t(key)`.
+ */
+export function mobileCheckKey(check: MobileCheck): string | null {
   switch (check) {
     case 'EMPTY':
     case 'TOO_SHORT':
-      return 'Please enter your 10-digit mobile number.';
+      return 'login.err.enter10';
     case 'BAD_START':
-      return 'Mobile numbers start with 6, 7, 8 or 9.';
+      return 'login.err.startDigit';
     default:
       return null;
   }
 }
 
-/** Plain-language message when requesting the code fails. Never mentions whether the number is registered. */
-export function otpRequestErrorMessage(kind: ApiErrorKind): string {
+/** i18n key of the message when requesting the code fails. Never mentions whether the number is registered. */
+export function otpRequestErrorKey(kind: ApiErrorKind): string {
   switch (kind) {
     case 'NETWORK':
-      return 'No internet. Please check your connection and try again.';
+      return 'login.err.network';
     case 'RATE_LIMITED':
-      return 'Too many attempts. Please wait a few minutes.';
+      return 'login.err.rateLimited';
     case 'BAD_REQUEST':
-      return 'Please check your mobile number and try again.';
+      return 'login.err.badRequest';
     case 'TIMEOUT':
-      return 'That took too long. Please try again.';
+      return 'login.err.timeout';
     default:
-      return 'Something went wrong. Please try again.';
+      return 'login.err.generic';
   }
 }
-
 /** Keep digits only, max 10. */
 export function sanitizeMobile(input: string): string {
   return input.replace(/\D/g, '').slice(0, 10);

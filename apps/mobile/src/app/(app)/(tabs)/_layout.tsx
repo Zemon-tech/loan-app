@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -60,7 +61,7 @@ function TabIcon({
  * Main Tabs navigator for the two primary destinations: Home (loans) and Profile (account).
  */
 export default function TabsLayout() {
-
+  const { t } = useTranslation();
   return (
     <Tabs
       backBehavior="history"
@@ -70,7 +71,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="loans"
         options={{
-          title: 'Loans',
+          title: t('tabs.loans'),
           headerShown: false,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon
@@ -86,7 +87,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="account"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           headerShown: false,
           // Hidden in live mode (no profile endpoint) — code retained for mock mode.
           href: SHOW_PROFILE_TAB ? undefined : null,

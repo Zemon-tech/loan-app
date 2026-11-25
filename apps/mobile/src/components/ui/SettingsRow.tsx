@@ -21,7 +21,7 @@ export function SectionLabel({ children }: { children: string }) {
         color: theme.colors.textSecondary,
         fontSize: theme.typography.size.caption - 1,
         fontWeight: theme.typography.weight.semibold,
-        letterSpacing: 0.8,
+        letterSpacing: theme.tracking(0.8),
         textTransform: 'uppercase',
         paddingHorizontal: theme.spacing.xs,
       }}

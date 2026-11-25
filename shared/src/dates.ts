@@ -172,6 +172,15 @@ export function isoDateTimeToIstDate(input: string): IsoDate {
   return fromUtcAnchor(new Date(utcMs + IST_OFFSET_MS));
 }
 
+/**
+ * Short Hindi month names for dates (digits stay 0-9). Hardcoded on purpose: `Intl` output for
+ * `hi` depends on the phone's Android version, so it is not reliable.
+ */
+const MONTHS_SHORT_HI = [
+  '\u091C\u0928', '\u092B\u093C\u0930', '\u092E\u093E\u0930\u094D\u091A', '\u0905\u092A\u094D\u0930\u0948', '\u092E\u0908', '\u091C\u0942\u0928',
+  '\u091C\u0941\u0932', '\u0905\u0917', '\u0938\u093F\u0924', '\u0905\u0915\u094D\u0924\u0942', '\u0928\u0935', '\u0926\u093F\u0938',
+];
+
 const MONTHS_SHORT = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -181,7 +190,8 @@ const MONTHS_SHORT = [
  * Format an ISO date for display as `d MMM yyyy` (PRD 8.0: "15 Jun 2026").
  *   formatDate('2026-06-15') -> "15 Jun 2026"
  */
-export function formatDate(iso: IsoDate): string {
+export function formatDate(iso: IsoDate, locale: string = 'en'): string {
   const { year, month, day } = parseIsoDate(iso);
-  return `${day} ${MONTHS_SHORT[month - 1]} ${year}`;
+  const months = locale.toLowerCase().startsWith('hi') ? MONTHS_SHORT_HI : MONTHS_SHORT;
+  return `${day} ${months[month - 1]} ${year}`;
 }

@@ -91,12 +91,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           loadRefreshToken(),
           loadUserMobile(),
         ]);
-        if (storedMobile) {
-          setMobile(storedMobile);
-        } else if (token) {
-          setMobile('+917042238874');
-          void saveUserMobile('+917042238874');
-        }
+        // Display only. If it was never stored, stay null: no invented number is ever shown.
+        if (storedMobile) setMobile(storedMobile);
         if (token) {
           const outcome = await Promise.race([
             refreshOnce(fetchRefreshTokens),

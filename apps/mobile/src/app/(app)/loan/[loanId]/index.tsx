@@ -10,14 +10,17 @@
  */
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   formatDate as formatIsoDate,
   formatINR as formatPaise,
+  installmentsBehind,
   interestChargedPaise,
   totalPayablePaise,
+  tutPaise,
   wholeInstallmentsIn,
 } from '@app/shared';
 
@@ -34,6 +37,7 @@ import { logger } from '@/lib/logger';
 
 export default function LoanOverviewScreen() {
   useSecureScreen();
+  const { t } = useTranslation();
   const { loanId } = useLocalSearchParams<{ loanId: string }>();
   const query = useLoanData(loanId ?? '');
 
@@ -51,8 +55,8 @@ export default function LoanOverviewScreen() {
       <StateScroll>
         <StateView
           icon="document-text-outline"
-          title="Loan not found"
-          message="We could not find this loan. Go back to Home and try again."
+          title={t('overview.notFoundTitle')}
+          message={t('overview.notFoundMsg')}
         />
       </StateScroll>
     );
@@ -68,6 +72,8 @@ function OverviewContent({
   refetch: () => void;
 }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
+  const lang = theme.language;
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [payHint, setPayHint] = useState(false);
@@ -82,13 +88,13 @@ function OverviewContent({
     color: theme.colors.textSecondary,
     fontSize: theme.typography.size.caption - 1,
     fontWeight: theme.typography.weight.semibold,
-    letterSpacing: 0.6,
+    letterSpacing: theme.tracking(0.6),
     textTransform: 'uppercase',
   } as const;
   const cardStyle = { borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md } as const;
 
   // Next collection: weekly loans only in the live API; a dash is shown when there is none.
-  const nextDate = vm.nextCollectionDate ? formatIsoDate(vm.nextCollectionDate) : null;
+  const nextDate = vm.nextCollectionDate ? formatIsoDate(vm.nextCollectionDate, lang) : null;
 
   const badge = vm.status === 'OVERDUE' ? 'OVERDUE' : vm.status === 'CLOSED' ? 'CLOSED' : 'ACTIVE';
 
@@ -130,10 +136,10 @@ function OverviewContent({
 
         <View style={{ gap: theme.golden.spacing.f1 }}>
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.golden.type.body, lineHeight: theme.golden.lineHeight.body }}>
-            Outstanding balance
+            {t('overview.outstanding')}
           </Text>
           <Text
-            accessibilityLabel={`Outstanding balance ${formatPaise(vm.outstandingPaise)}`}
+            accessibilityLabel={`${t('overview.outstanding')} ${formatPaise(vm.outstandingPaise)}`}
             numberOfLines={1}
             adjustsFontSizeToFit
             style={{
@@ -167,14 +173,14 @@ function OverviewContent({
           icon="calendar-outline"
           iconBackground="primarySoft"
           iconColor="onPrimary"
-          label="Next collection"
+          label={t('overview.nextCollection')}
           value={nextDate ?? '\u2014'}
-          sub={nextDate && vm.weeklyOff ? `Closed on ${vm.weeklyOff}` : undefined}
+          sub={nextDate && vm.weeklyOff ? t('overview.closedOn', { day: t(`weekday.${vm.weeklyOff}`, { defaultValue: vm.weeklyOff }) }) : undefined}
           action={
             showPayNow() ? (
               <View style={{ gap: theme.spacing.xs }}>
                 <Button
-                  label="Pay now"
+                  label={t('overview.payNow')}
                   onPress={() => {
                     // No payment flow yet (link to be added later); never log amounts or loan ids.
                     logger.info('overview', 'pay_now_tapped');
@@ -183,7 +189,7 @@ function OverviewContent({
                 />
                 {payHint ? (
                   <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.textSecondary, fontSize: theme.golden.type.small }}>
-                    Online payment is not available yet.
+                    {t('overview.payNotReady')}
                   </Text>
                 ) : null}
               </View>
@@ -194,9 +200,9 @@ function OverviewContent({
           icon="checkmark-circle-outline"
           iconBackground="successSoft"
           iconColor="success"
-          label="Last payment"
+          label={t('overview.lastPayment')}
           value={vm.lastPayment ? formatPaise(vm.lastPayment.amountPaise) : '\u2014'}
-          sub={vm.lastPayment?.date ? `on ${formatIsoDate(vm.lastPayment.date)}` : undefined}
+          sub={vm.lastPayment?.date ? t('overview.onDate', { date: formatIsoDate(vm.lastPayment.date, lang) }) : undefined}
           subTone="success"
         />
       </View>
@@ -204,23 +210,23 @@ function OverviewContent({
       {/* Settlement agreement card (wire-backed) */}
       {vm.settlement ? (
         <Card tone="card" style={{ ...cardStyle, borderColor: theme.colors.warning, borderWidth: 1.5 }}>
-          <SectionHeading icon="hand-left-outline" title="Settlement agreement" />
+          <SectionHeading icon="hand-left-outline" title={t('overview.settlementTitle')} />
           <View style={{ gap: 2 }}>
-            <Text style={caps}>Agreed settlement amount</Text>
+            <Text style={caps}>{t('overview.settleAmount')}</Text>
             <Text style={{ color: theme.colors.textPrimary, fontSize: theme.typography.size.heading, fontWeight: theme.typography.weight.bold }}>
               {formatPaise(vm.settlement.settlementAmountPaise)}
             </Text>
           </View>
           <View>
             {vm.settlement.settlementDate ? (
-              <AmountRow label="Agreement date" value={formatIsoDate(vm.settlement.settlementDate)} />
+              <AmountRow label={t('overview.settleDate')} value={formatIsoDate(vm.settlement.settlementDate, lang)} />
             ) : null}
-            <AmountRow label="Paid since settlement" value={formatPaise(vm.settlement.paidSinceSettlementPaise)} tone="success" />
-            <AmountRow label="Remaining settlement balance" value={formatPaise(vm.settlement.balancePaise)} bold tone="danger" />
+            <AmountRow label={t('overview.paidSince')} value={formatPaise(vm.settlement.paidSinceSettlementPaise)} tone="success" />
+            <AmountRow label={t('overview.settleBalance')} value={formatPaise(vm.settlement.balancePaise)} bold tone="danger" />
             {vm.settlement.installmentAmountPaise ? (
               <AmountRow
-                label="Installment terms"
-                value={`${formatPaise(vm.settlement.installmentAmountPaise)} ${vm.settlement.paymentFrequency ? `/ ${vm.settlement.paymentFrequency}` : ''}`}
+                label={t('overview.settleTerms')}
+                value={`${formatPaise(vm.settlement.installmentAmountPaise)} ${vm.settlement.paymentFrequency ? `/ ${t(`frequency.${vm.settlement.paymentFrequency}`, { defaultValue: vm.settlement.paymentFrequency })}` : ''}`}
               />
             ) : null}
           </View>
@@ -235,17 +241,18 @@ function OverviewContent({
 
 function LoanProgress({ totalEmis, emisPaid }: { totalEmis: number; emisPaid: number }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const safeTotal = Math.max(1, totalEmis);
   const clampedPaid = Math.min(safeTotal, Math.max(0, emisPaid));
   const remaining = safeTotal - clampedPaid;
   return (
     <View style={{ gap: theme.golden.spacing.f1 }}>
-      <ProgressBar ratio={clampedPaid / safeTotal} height={8} accessibilityLabel={`${clampedPaid} of ${safeTotal} EMIs paid`} />
+      <ProgressBar ratio={clampedPaid / safeTotal} height={8} accessibilityLabel={t('overview.emisPaid', { paid: clampedPaid, total: safeTotal })} />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.md }}>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.golden.type.caption }}>
-          {clampedPaid} of {safeTotal} EMIs paid
+          {t('overview.emisPaid', { paid: clampedPaid, total: safeTotal })}
         </Text>
-        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.golden.type.caption }}>{remaining} left</Text>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.golden.type.caption }}>{t('overview.left', { n: remaining })}</Text>
       </View>
     </View>
   );
@@ -330,12 +337,13 @@ function LedgerRow({
   last?: boolean;
 }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const g = theme.golden;
   const size = g.type.body;
   return (
     <View
       accessible
-      accessibilityLabel={`${prefix === '+' ? 'Plus ' : prefix ? 'Minus ' : ''}${label}${note ? ` ${note}` : ''}, ${value}`}
+      accessibilityLabel={`${prefix === '+' ? `${t('summary.plus')} ` : prefix ? `${t('summary.minus')} ` : ''}${label}${note ? ` ${note}` : ''}, ${value}`}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -376,12 +384,17 @@ function LedgerRow({
  */
 function LoanSummaryCard({ vm, dues }: { vm: LoanDetailVM; dues: NonNullable<LoanDetailVM['dues']> }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const g = theme.golden;
   const payable = totalPayablePaise(vm.emiAmountPaise, vm.numberOfInstallments);
   const interest = interestChargedPaise(vm.emiAmountPaise, vm.numberOfInstallments, vm.principalPaise);
   const dueCount = wholeInstallmentsIn(dues.installmentsDuePaise, vm.emiAmountPaise);
   const dueNote = dueCount != null && dueCount > 0 && vm.emiAmountPaise > 0 ? `(${formatPaise(vm.emiAmountPaise)} x ${dueCount})` : undefined;
-  const overdueCount = vm.installmentsOverdue ?? 0;
+  // Total Due = instalments due so far ONLY (no fees / interest / discount; those are in the ledger
+  // below and inside the outstanding balance). Tut is worked out here from the same two numbers so
+  // the three rows always add up: Total Due - Total Paid = Tut.
+  const tut = tutPaise(dues.installmentsDuePaise, dues.totalPaidPaise);
+  const overdueCount = installmentsBehind(tut, vm.emiAmountPaise) ?? vm.installmentsOverdue ?? 0;
 
   return (
     <Card tone="card" style={{ borderRadius: theme.radius.xl, padding: theme.spacing.lg, gap: theme.spacing.md }}>
@@ -392,11 +405,11 @@ function LoanSummaryCard({ vm, dues }: { vm: LoanDetailVM; dues: NonNullable<Loa
             accessibilityRole="header"
             style={{ color: theme.colors.textPrimary, fontSize: g.type.lead, lineHeight: g.lineHeight.lead, fontWeight: theme.typography.weight.bold }}
           >
-            Loan summary
+            {t('summary.title')}
           </Text>
           {interest != null ? (
             <Text style={{ color: theme.colors.textSecondary, fontSize: g.type.body, lineHeight: g.lineHeight.body }}>
-              Interest charged{' '}
+              {t('summary.interest')}{' '}
               <Text style={{ color: theme.colors.textPrimary, fontWeight: theme.typography.weight.bold }}>{formatPaise(interest)}</Text>
             </Text>
           ) : null}
@@ -405,12 +418,12 @@ function LoanSummaryCard({ vm, dues }: { vm: LoanDetailVM; dues: NonNullable<Loa
 
       {/* Due / paid / Tut */}
       <View style={{ borderRadius: theme.radius.lg, backgroundColor: theme.colors.mutedSurface, paddingHorizontal: theme.spacing.md, overflow: 'hidden' }}>
-        <LedgerRow label="Total Due" note={dueNote} value={formatPaise(dues.totalDuePaise)} />
-        <LedgerRow label="Total Paid/Credit" value={formatPaise(dues.totalPaidPaise)} />
+        <LedgerRow label={t('summary.totalDue')} note={dueNote} value={formatPaise(dues.installmentsDuePaise)} />
+        <LedgerRow label={t('summary.totalPaid')} value={formatPaise(dues.totalPaidPaise)} />
         {/* Tut = total due - total paid (the overdue amount); badge = instalments behind */}
         <View
           accessible
-          accessibilityLabel={`Tut, ${overdueCount > 0 ? `${overdueCount} ${overdueCount === 1 ? 'instalment' : 'instalments'} behind, ` : ''}${formatPaise(dues.overdueAmountPaise)}`}
+          accessibilityLabel={overdueCount > 0 ? t('summary.tutA11y', { n: overdueCount, amount: formatPaise(tut) }) : t('summary.tutA11yNone', { amount: formatPaise(tut) })}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -423,7 +436,7 @@ function LoanSummaryCard({ vm, dues }: { vm: LoanDetailVM; dues: NonNullable<Loa
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-            <Text style={{ color: theme.colors.onPrimary, fontSize: g.type.body, fontWeight: theme.typography.weight.bold }}>Tut</Text>
+            <Text style={{ color: theme.colors.onPrimary, fontSize: g.type.body, fontWeight: theme.typography.weight.bold }}>{t('summary.tut')}</Text>
             {overdueCount > 0 ? (
               <View style={{ minWidth: 22, paddingHorizontal: 6, paddingVertical: 1, borderRadius: theme.radius.sm, backgroundColor: theme.colors.danger, alignItems: 'center' }}>
                 <Text style={{ color: '#FFFFFF', fontSize: g.type.small, fontWeight: theme.typography.weight.bold }}>{overdueCount}</Text>
@@ -431,7 +444,7 @@ function LoanSummaryCard({ vm, dues }: { vm: LoanDetailVM; dues: NonNullable<Loa
             ) : null}
           </View>
           <Text style={{ color: theme.colors.onPrimary, fontSize: g.type.body, fontWeight: theme.typography.weight.bold }}>
-            {formatPaise(dues.overdueAmountPaise)}
+            {formatPaise(tut)}
           </Text>
         </View>
       </View>
@@ -439,16 +452,16 @@ function LoanSummaryCard({ vm, dues }: { vm: LoanDetailVM; dues: NonNullable<Loa
       {/* Ledger */}
       <View>
         {payable != null ? (
-          <LedgerRow label="Payable Amount" note={`(${formatPaise(vm.principalPaise)})`} noteTone="textSecondary" value={formatPaise(payable)} valueTone="success" />
+          <LedgerRow label={t('summary.payable')} note={`(${formatPaise(vm.principalPaise)})`} noteTone="textSecondary" value={formatPaise(payable)} valueTone="success" />
         ) : null}
-        <LedgerRow prefix="+" label="Late Fee" value={formatPaise(dues.lateFeesPaise)} />
-        <LedgerRow prefix="+" label="Overdue Interest Charge" value={formatPaise(dues.overdueInterestPaise)} />
-        <LedgerRow prefix="+" label="Recovery Visit Charges" value={formatPaise(dues.recoveryVisitChargesPaise)} />
-        <LedgerRow prefix={'\u2212'} label="Discount / Offer" value={formatPaise(dues.discountPaise)} />
-        <LedgerRow prefix={'\u2212'} label="Payment Adjusted" value={formatPaise(dues.adjustmentsPaise)} />
-        <LedgerRow prefix={'\u2212'} label="Advance Installment" value={formatPaise(dues.advanceInstallmentPaise)} />
-        <LedgerRow prefix={'\u2212'} label="Installment Paid" value={formatPaise(dues.installmentPaymentsPaise)} valueTone="success" />
-        <LedgerRow label="Total Outstanding Balance" value={formatPaise(vm.outstandingPaise)} bold last />
+        <LedgerRow prefix="+" label={t('summary.lateFee')} value={formatPaise(dues.lateFeesPaise)} />
+        <LedgerRow prefix="+" label={t('summary.overdueInterest')} value={formatPaise(dues.overdueInterestPaise)} />
+        <LedgerRow prefix="+" label={t('summary.recoveryVisit')} value={formatPaise(dues.recoveryVisitChargesPaise)} />
+        <LedgerRow prefix={'\u2212'} label={t('summary.discount')} value={formatPaise(dues.discountPaise)} />
+        <LedgerRow prefix={'\u2212'} label={t('summary.adjusted')} value={formatPaise(dues.adjustmentsPaise)} />
+        <LedgerRow prefix={'\u2212'} label={t('summary.advance')} value={formatPaise(dues.advanceInstallmentPaise)} />
+        <LedgerRow prefix={'\u2212'} label={t('summary.installmentPaid')} value={formatPaise(dues.installmentPaymentsPaise)} valueTone="success" />
+        <LedgerRow label={t('summary.totalOutstanding')} value={formatPaise(vm.outstandingPaise)} bold last />
       </View>
     </Card>
   );
